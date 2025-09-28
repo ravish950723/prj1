@@ -1,0 +1,80 @@
+import pandas as pd
+import numpy as np
+
+def detect_smc_accumulation_breakout(df):
+    recent = df.tail(20)
+    if len(recent) < 20:
+        return False
+    tight_range = recent['high'].max() - recent['low'].min() < 0.05 * recent['close'].iloc[-1]
+    breakout = df.iloc[-1]['close'] > recent['high'].max()
+    volume_spike = df.iloc[-1]['volume'] > 1.5 * recent['volume'].mean()
+    return tight_range and breakout and volume_spike
+
+def detect_mean_reversion_buy(df):
+    if df.empty:
+        return False
+    last = df.iloc[-1]
+    return (
+        last.get('close', np.nan) <= last.get('BB_lower', np.nan) and
+        last.get('RSI_14', 100) < 40 and
+        last.get('MACD_hist', 1) < 0
+    )
+
+def detect_bullish_engulfing(df):
+    if len(df) < 2:
+        return False
+    prev, curr = df.iloc[-2], df.iloc[-1]
+    return (
+        prev['close'] < prev['open'] and
+        curr['close'] > curr['open'] and
+        curr['close'] > prev['open'] and
+        curr['open'] < prev['close']
+    )
+
+def detect_hammer(df):
+    if len(df) < 1:
+        return False
+    last = df.iloc[-1]
+    body = abs(last['close'] - last['open'])
+    lower_wick = last['open'] - last['low'] if last['open'] > last['close'] else last['close'] - last['low']
+    upper_wick = last['high'] - last['close'] if last['close'] > last['open'] else last['high'] - last['open']
+    return (
+        lower_wick > 2 * body and
+        upper_wick < body
+    )
+
+def compute_upward_trend(df):
+    df["trend_strength"] = (
+        (df["EMA_20"] > df["EMA_50"]) &
+        (df["MACD"] > 0) &
+        (df["RSI_14"] > 50)
+    ).astype(int)
+    return df
+
+def compute_signal_score(df):
+    score = 0.0
+    signal_count = 0
+
+    if detect_smc_accumulation_breakout(df):
+        score += 0.05
+        signal_count += 1
+
+    if detect_mean_reversion_buy(df):
+        score += 0.03
+        signal_count += 1
+
+    if detect_bullish_engulfing(df):
+        score += 0.03
+        signal_count += 1
+
+    if detect_hammer(df):
+        score += 0.03
+        signal_count += 1
+
+    df = compute_upward_trend(df)
+    if df.iloc[-1].get("trend_strength", 0) == 1:
+        score += 0.01
+        signal_count += 1
+
+    recommendation = "BUY" if score > 0.08 and signal_count >= 2 else "HOLD"
+    return score, signal_count, recommendation
