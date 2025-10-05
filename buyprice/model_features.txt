@@ -22,6 +22,7 @@ ATR_14
 BB_width
 return_std
 EMA_21_slope
+strong_trend
 above_EMA21
 above_EMA50
 above_EMA200

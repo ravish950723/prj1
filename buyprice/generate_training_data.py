@@ -63,8 +63,14 @@ train_df = pd.DataFrame(training_rows)
 train_df.to_csv("train_data.csv", index=False)
 print(f"✅ Training data saved: {len(train_df)} rows")
 
+if train_df.empty:
+    print("⚠️ train_df is empty — no rows generated. Skipping stats/SMOTE.")
+    import sys
+    sys.exit(0)
+
+
 # === Optional: Print label distribution and feature correlation ===
-label_dist = train_df['strong_buy'].value_cocdunts(normalize=True) * 100
+label_dist = train_df['strong_buy'].value_counts(normalize=True) * 100
 print("\n🔍 Label Distribution (%):\n", label_dist)
 
 # Only use numeric features for correlation

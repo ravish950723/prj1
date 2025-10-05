@@ -27,6 +27,43 @@ STRONG_BUY_THRESH = 0.80
 TECH_BUY_FALLBACK = 0.60
 
 
+# --- model_loader.py (or top of buy.py) ---
+from pathlib import Path
+import os, joblib
+
+from pathlib import Path
+import joblib, json
+
+HERE = Path(__file__).resolve().parent
+
+def load_model():
+    for name in ["strong_buy_xgb_model_calibrated.pkl", "strong_buy_xgb_model.pkl"]:
+        p = HERE / name
+        if p.exists():
+            m = joblib.load(p)
+            print(f"✅ Loaded model: {p.name}")
+            return m
+    print("❌ Model file not found.")
+    return None
+
+def load_threshold(default=0.25):
+    p = HERE / "strong_buy_thresholds.json"
+    if p.exists():
+        try:
+            obj = json.loads(p.read_text())
+            thr = float(obj.get("best_f1", {}).get("thr", default))
+            print(f"✅ Using threshold (best_f1): {thr:.2f}")
+            return thr
+        except Exception as e:
+            print(f"[WARN] failed to read thresholds: {e}")
+    print(f"[INFO] Using default threshold: {default:.2f}")
+    return default
+
+model = load_model()
+thr_buy = load_threshold()
+
+
+
 def get_confidence_band(prob: float) -> str:
     """Map model probability to a human label."""
     if prob >= STRONG_BUY_THRESH:
@@ -128,7 +165,10 @@ def _predict_proba_for_last_row(symbol: str, df: pd.DataFrame) -> float:
 
     try:
         proba = float(model.predict_proba(features)[0][1])
-        proba = max(0.0, min(1.0, proba))
+        # Clamp to [0,1] just in case a custom calibrator or odds sneaks in
+        if not (0.0 <= proba <= 1.0):
+            print(f"[WARN] Model proba out of [0,1]: {proba:.4f} → clamping")
+            proba = max(0.0, min(1.0, proba))
         return proba
     except Exception as e:
         print(f"⚠️ Model prediction failed for {symbol}: {e}")
@@ -235,6 +275,7 @@ def main():
 
     print("Summary of Predictions and Recommendations:")
 
+    # We label these "90D" to match backtest.tail(90) window
     hit_list, gain_list, days_list = [], [], []
 
     # Augment with signals, model proba, indicators, and backtest
@@ -298,12 +339,12 @@ def main():
             else:
                 res["Tech Fallback Score"] = 0.0
 
-            # Backtest (10D window)
+            # Backtest (matches evaluate_backtest_accuracy's 90-bar window)
             buy_price = res["Refined Buy Price"]
             hit, gain, days_to_peak = evaluate_backtest_accuracy(symbol, df, buy_price)
 
         except Exception as e:
-            print(f"⚠️ Could not evaluate 10D backtest for {symbol}: {e}")
+            print(f"⚠️ Could not evaluate 90D backtest for {symbol}: {e}")
             hit, gain, days_to_peak = False, 0.0, -1
             res.setdefault("Model Probability", 0.0)
             res.setdefault("Model-Driven Buy", "❌")
@@ -315,10 +356,11 @@ def main():
 
     # Prepare final DataFrame
     df_summary = pd.DataFrame(summary)
-    df_summary["10D Hit"] = hit_list
-    df_summary["10D Gain (%)"] = gain_list
+    df_summary["90D Hit"] = hit_list
+    df_summary["90D Gain (%)"] = gain_list
     df_summary["Days to Peak"] = days_list
 
+    # Rank primarily by model probability; could add composite later
     df_summary.sort_values(by="Model Probability", ascending=False, inplace=True)
 
     columns_to_display = [
@@ -327,13 +369,14 @@ def main():
         "Trend", "Recommendation", "Darvas Breakout %", "Darvas Signal",
         "Rule-Based Buy", "Model-Driven Buy", "Model Probability",
         "Confidence Band", "Tech Fallback Score", "Signal",
-        "10D Hit", "10D Gain (%)", "Days to Peak",
+        "90D Hit", "90D Gain (%)", "Days to Peak",
         # New human-readable TA columns
         "EMA Uptrend", "EMA21 Slope", "ADX Strength", "MACD Cross", "RSI", "RSI State",
         "OBV Trend", "At BB Lower",
         # Pattern flags
         "Volume Surge", "Near Support", "Signal Score",
         "SMC_Breakout", "Mean_Reversion", "Bullish_Engulfing", "Hammer", "Trend_Strength",
+        "Market Stage",
     ]
 
     # Fill optional columns if missing

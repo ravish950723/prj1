@@ -7,196 +7,217 @@ from fetching import fetch_data_cached
 from institutional_investor import score_institutional_investor
 from darvas import darvas_box_signal
 
+# Toggle to see stage distributions & sanity checks in stdout
 DEBUG = False
 
-def compute_indicators(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
-    """Compute a broad set of indicators used downstream.
-    Assumes df has columns: date, open, high, low, close, volume.
-    Returns the same df with indicator columns appended.
+
+def _classify_market_stage(df: pd.DataFrame) -> pd.Series:
     """
+    Classify each row into a market stage using already-computed columns.
+    Stages: Accumulation, Mark-Up, Distribution, Mark-Down, Neutral/Transition.
+    Priority: Mark-Down > Distribution > Mark-Up > Accumulation > Neutral/Transition
+    """
+    n = len(df)
+    stage = pd.Series(["Neutral/Transition"] * n, index=df.index, dtype="object")
+
+    # Safe getters (avoid KeyError / dtype surprises)
+    def getcol(name, default, dtype=None):
+        s = df[name] if name in df.columns else pd.Series([default] * n, index=df.index)
+        if dtype == "bool":
+            return s.fillna(False).astype(bool)
+        if dtype == "float":
+            return pd.to_numeric(s, errors="coerce").fillna(float(default)).astype(float)
+        if dtype == "int":
+            return pd.to_numeric(s, errors="coerce").fillna(int(default)).astype(int)
+        if dtype == "str":
+            return s.fillna(str(default)).astype(str)
+        return s
+
+    tight_range      = getcol("tight_range", False, "bool")
+    ema_up           = getcol("EMA_uptrend", False, "bool")
+    htf              = getcol("HTF_Trend", "NEUTRAL", "str").str.upper()
+    strong_trend     = getcol("strong_trend", 0, "int")
+    adx              = getcol("ADX_14", 0.0, "float")
+    macd_hist_slope  = getcol("MACD_hist_slope", 0.0, "float")
+    macd_hist        = getcol("MACD_hist", 0.0, "float")
+
+    # Masks (vectorized)
+    mark_down   = (htf == "DOWN") & (~ema_up) & (macd_hist < 0)
+    mark_up     = (htf == "UP") & ((strong_trend == 1) | (adx >= 25))
+    distribution = (tight_range) & (htf == "UP") & (macd_hist_slope <= 0)
+    accumulation = (tight_range) & (~ema_up)
+
+    # Apply in priority order
+    stage.loc[accumulation] = "Accumulation"
+    stage.loc[mark_up]      = "Mark-Up"
+    stage.loc[distribution] = "Distribution"
+    stage.loc[mark_down]    = "Mark-Down"
+
+    if DEBUG:
+        print("[stage] counts:", stage.value_counts(dropna=False).to_dict())
+        print("[stage] masks  :",
+              {"accum": int(accumulation.sum()),
+               "mark_up": int(mark_up.sum()),
+               "dist": int(distribution.sum()),
+               "mark_down": int(mark_down.sum())})
+
+    return stage
+
+
+def compute_indicators(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+    """
+    Compute a broad set of indicators used downstream.
+    Assumes df has columns: date, open, high, low, close, volume.
+    Returns the same df with indicator columns appended, including 'market_stage'.
+    """
+    df = df.copy()
+
+    # Normalize core price/vol types early
+    for col in ["open", "high", "low", "close", "volume"]:
+        df[col] = pd.to_numeric(df.get(col), errors="coerce")
+
     # === Core Trend & Momentum Indicators ===
-    df["EMA_20"] = ta.ema(df["close"], length=20)
-    df["EMA_21"] = ta.ema(df["close"], length=21)
-    df["EMA_50"] = ta.ema(df["close"], length=50)
+    df["EMA_20"]  = ta.ema(df["close"], length=20)
+    df["EMA_21"]  = ta.ema(df["close"], length=21)
+    df["EMA_50"]  = ta.ema(df["close"], length=50)
     df["EMA_200"] = ta.ema(df["close"], length=200)
 
     adx = ta.adx(df["high"], df["low"], df["close"], length=14)
-    df["ADX_14"] = adx["ADX_14"]
-
+    df["ADX_14"] = pd.to_numeric(adx["ADX_14"], errors="coerce")
 
     macd = ta.macd(df["close"])
-    df["MACD"] = macd["MACD_12_26_9"]
-    df["MACD_signal"] = macd["MACDs_12_26_9"]
-    df["MACD_hist"] = macd["MACDh_12_26_9"]
+    df["MACD"]            = pd.to_numeric(macd["MACD_12_26_9"], errors="coerce")
+    df["MACD_signal"]     = pd.to_numeric(macd["MACDs_12_26_9"], errors="coerce")
+    df["MACD_hist"]       = pd.to_numeric(macd["MACDh_12_26_9"], errors="coerce")
     df["MACD_hist_slope"] = df["MACD_hist"].diff().rolling(3).mean()
-    df["MACD_crossover"] = (df["MACD_hist"] > 0) & (df["MACD_hist"].shift(1) < 0)
+    df["MACD_crossover"]  = (df["MACD_hist"] > 0) & (df["MACD_hist"].shift(1) < 0)
 
-    df["RSI_14"] = ta.rsi(df["close"], length=14)
+    df["RSI_14"]   = ta.rsi(df["close"], length=14)
     df["RSI_slope"] = df["RSI_14"].diff().rolling(3).mean()
-    df["OBV"] = ta.obv(df["close"], df["volume"])
+    df["OBV"]       = ta.obv(df["close"], df["volume"])
+
     bb = ta.bbands(df["close"], length=20)
     df[["BB_upper", "BB_middle", "BB_lower"]] = bb[["BBU_20_2.0", "BBM_20_2.0", "BBL_20_2.0"]]
 
     # === Volatility Metrics ===
-    df["ATR_14"] = ta.atr(df["high"], df["low"], df["close"], length=14)
+    df["ATR_14"]   = ta.atr(df["high"], df["low"], df["close"], length=14)
     df["BB_width"] = df["BB_upper"] - df["BB_lower"]
     df["return_std"] = df["close"].pct_change().rolling(10).std()
 
-    df = df.copy()
-    df.replace({None: np.nan, "None": np.nan, "": np.nan}, inplace=True)
-    for col in ["open", "high", "low", "close", "volume"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-
-
-
     # === Trend Confirmation ===
-    for c in ["EMA_20", "EMA_21", "EMA_50", "EMA_200"]:
-        df[c] = pd.to_numeric(df.get(c), errors="coerce")
-
     df["EMA_21_slope"] = df["EMA_21"].diff().rolling(5).mean()
-    df["EMA_uptrend"] = (df["EMA_21"] > df["EMA_50"]) & (df["EMA_21_slope"] > 0)
-    df["strong_trend"] = df["ADX_14"] > 25
+    df["EMA_uptrend"]  = (df["EMA_21"] > df["EMA_50"]) & (df["EMA_21_slope"] > 0)
+    df["strong_trend"] = (df["ADX_14"] > 25).astype(int)
 
-    df["above_EMA21"] = (df["close"] > df["EMA_21"]).astype(int)
-    df["above_EMA50"] = (df["close"] > df["EMA_50"]).astype(int)
+    df["above_EMA21"]  = (df["close"] > df["EMA_21"]).astype(int)
+    df["above_EMA50"]  = (df["close"] > df["EMA_50"]).astype(int)
     df["above_EMA200"] = (df["close"] > df["EMA_200"]).astype(int)
 
     # === Behavioral Patterns ===
     df["green_candles"] = (df["close"] > df["open"]).astype(int).rolling(3).sum()
-    df["red_candles"] = (df["close"] < df["open"]).astype(int).rolling(3).sum()
-    df["volume_trend"] = df["volume"].diff().rolling(3).mean()
+    df["red_candles"]   = (df["close"] < df["open"]).astype(int).rolling(3).sum()
+    df["volume_trend"]  = df["volume"].diff().rolling(3).mean()
 
     # === Tight Range Detection ===
-    df["range_std"] = (df["high"] - df["low"]).rolling(10).std()
-    df["tight_range"] = df["range_std"] < df["range_std"].rolling(50).mean() * 0.8
+    # Compare recent intraday range variability vs a 50-day baseline
+    intraday_range = (df["high"] - df["low"])
+    df["range_std"]  = intraday_range.rolling(10, min_periods=10).std()
+    base_std         = df["range_std"].rolling(50, min_periods=20).mean()
+    df["tight_range"] = (df["range_std"] < base_std * 0.8).fillna(False)
 
     # === Darvas Box Breakout ===
     df = darvas_box_signal(df)
 
     # === Volume Surge Confirmation ===
-    df["volume_avg_20"] = df["volume"].rolling(20).mean()
-    df["volume_surge"] = df["volume"] > 1.5 * df["volume_avg_20"]
+    df["volume_avg_20"] = df["volume"].rolling(20, min_periods=1).mean()
+    df["volume_surge"]  = (df["volume"] > 1.5 * df["volume_avg_20"]).fillna(False)
 
     # === VWAP Support (proxy) ===
-    df["vwap_support"] = df["low"].rolling(5).min()
+    # If you add true session VWAP later, wire it here; for now a 5-bar swing low proxy is used.
+    df["vwap_support"] = df["low"].rolling(5, min_periods=1).min()
 
     # === Price Near Support Check (VWAP or BB Lower) ===
-    df["near_support"] = (df["close"] <= df["vwap_support"] * 1.02) | (df["close"] <= df["BB_lower"] * 1.02)
+    df["near_support"] = (
+        (df["close"] <= df["vwap_support"] * 1.02) |
+        (df["close"] <= df["BB_lower"] * 1.02)
+    ).fillna(False)
 
-    # === Sector Rotation Strength (placeholder) ===
+    # === Sector Rotation Strength (placeholder for future enhancement) ===
     df["sector_outperformance"] = 0.0
 
     # === Composite Signal Score ===
     df["signal_score"] = (
         df["EMA_uptrend"].astype(int) * 0.15
         + df["MACD_crossover"].astype(int) * 0.15
-        + df["strong_trend"].astype(int) * 0.15
-        + df["darvas_signal"].astype(int) * 0.10
+        + (df["strong_trend"] > 0).astype(int) * 0.15
+        + df["darvas_signal"].fillna(0).astype(int) * 0.10
         + df["tight_range"].astype(int) * 0.10
         + df["volume_surge"].astype(int) * 0.10
         + df["near_support"].astype(int) * 0.05
-        + df["green_candles"] / 3 * 0.05
+        + (df["green_candles"] / 3.0).clip(lower=0, upper=1) * 0.05
         + df["above_EMA200"] * 0.05
-        + df["MACD_hist_slope"].apply(lambda x: 1 if x > 0 else 0) * 0.05
-    )
+        + (df["MACD_hist_slope"] > 0).astype(int) * 0.05
+    ).fillna(0.0)
+
     df["refined_buy_signal"] = df["signal_score"] >= 0.75
 
     # === Confidence Metrics ===
+    # score_institutional_investor expects/uses OBV/volume/close
     df["institutional_score"] = score_institutional_investor(df)
-    df["volume_weight"] = np.minimum(df["volume"] / df["volume_avg_20"], 2.0)
-    df["confidence_score"] = (
-        df["institutional_score"] * 0.5
-        + df["volume_weight"] * 0.3
-        + df["ADX_14"].fillna(0) / 100 * 0.2
-    )
+    df["volume_weight"] = np.minimum(df["volume"] / df["volume_avg_20"].replace(0, np.nan), 2.0).fillna(0.0)
 
-    df["confidence_score"] = np.clip(df["confidence_score"], 0, 1)
+    df["confidence_score"] = (
+        df["institutional_score"].fillna(0) * 0.5
+        + df["volume_weight"].fillna(0) * 0.3
+        + (df["ADX_14"].fillna(0) / 100.0) * 0.2
+    ).clip(0, 1)
+
     # === Recommendation Assignment ===
     df["recommendation"] = np.where(df["refined_buy_signal"], "BUY", "HOLD")
 
-    # === Trend Levels ===
-    df["HTF_Trend"] = (df["EMA_21"] > df["EMA_50"]).replace({True: "UP", False: "DOWN"})
-    df["ITF_Trend"] = (ta.ema(df["close"], length=8) > ta.ema(df["close"], length=21)).replace({True: "UP", False: "DOWN"})
-    df["LTF_Trend"] = (ta.ema(df["close"], length=5) > ta.ema(df["close"], length=13)).replace({True: "UP", False: "DOWN"})
+    # === Trend Levels (string labels for downstream use) ===
+    df["HTF_Trend"] = np.where((df["EMA_21"] > df["EMA_50"]), "UP", "DOWN")
+    df["ITF_Trend"] = np.where(ta.ema(df["close"], length=8)  > ta.ema(df["close"], length=21), "UP", "DOWN")
+    df["LTF_Trend"] = np.where(ta.ema(df["close"], length=5)  > ta.ema(df["close"], length=13), "UP", "DOWN")
+
+    # === FINAL: Market Stage ===
+    df["market_stage"] = _classify_market_stage(df)
+
+    if DEBUG:
+        print("[compute] market_stage counts:", df["market_stage"].value_counts(dropna=False).to_dict())
 
     return df
 
 
 def analyze_symbol(symbol: str):
-    """Return a compact dict of latest metrics for a symbol.
-    NOTE: Sector correlation code fixed to avoid referencing undefined df_etf.
+    """
+    Return a compact dict of latest metrics for a symbol.
+    NOTE: Sector correlation code remains in symbol_analysis.py; here we focus on indicator computation.
     """
     try:
         df = fetch_data_cached(symbol, "3 Y", "1 day", refresh=True)
         df = compute_indicators(df, symbol=symbol)
 
-        # Smarter Buy Price Estimation Logic (pullback/bounce areas)
-        ema21 = df["EMA_21"].iloc[-1]
-        vwap_support = df["vwap_support"].iloc[-1]
-        darvas_low = df["darvas_low"].iloc[-1] if "darvas_low" in df.columns else np.nan
-        buy_price = float(np.nanmean([ema21, vwap_support, darvas_low]))
-
-        institutional_score = float(df["institutional_score"].iloc[-1])
-        confidence_score = float(df["confidence_score"].iloc[-1])
-        volume_weight = float(df["volume_weight"].iloc[-1])
-        adx = float(df["ADX_14"].iloc[-1])
-        trend = df["HTF_Trend"].iloc[-1]
-        recommendation = df["recommendation"].iloc[-1]
-
-        darvas_breakout_pct = float(round(df["darvas_breakout_pct"].iloc[-1], 2))
-        darvas_signal = "✅" if int(df["darvas_signal"].iloc[-1]) == 1 else ""
-
-        # pick sector ETF
-        etf_symbol = sector_etfs.get(symbol_to_sector.get(symbol))
-        sector_corr = 0.0
-        try:
-            if etf_symbol and etf_symbol != symbol:
-                df_etf = fetch_data_cached(etf_symbol, '3 Y', '1 day')
-                df_etf = compute_indicators(df_etf, symbol=etf_symbol)
-
-                s = df[['date', 'close']].rename(columns={'close': 'close_sym'})
-                e = df_etf[['date', 'close']].rename(columns={'close': 'close_etf'})
-                merged = s.merge(e, on='date', how='inner')
-
-                # after merged = s.merge(e, on='date', how='inner')
-                if len(merged) < 21:
-                    if DEBUG:
-                        print(f"[{symbol}] DEBUG sector-corr: merged_len={len(merged)} (<21) → forcing 0.0")
-                    sector_corr = 0.0
-                else:
-                    rc = (merged['close_sym'].pct_change()
-                          .rolling(20)
-                          .corr(merged['close_etf'].pct_change()))
-                    val = rc.iloc[-1]
-                    if pd.isna(val) or not np.isfinite(val):
-                        if DEBUG:
-                            na_ratio = float(rc.isna().mean())
-                            print(f"[{symbol}] DEBUG sector-corr: NaN/inf val; rc_len={len(rc)}, NaN%={na_ratio:.2%}")
-                        sector_corr = 0.0
-                    else:
-                        sector_corr = float(val)
-                        if DEBUG and abs(sector_corr) < 1e-6:
-                            print(f"[{symbol}] DEBUG sector-corr near zero with valid rc (check ETF mapping)")
-
-        except Exception as e:
-            print(f"[{symbol}] sector correlation error: {e}")
-
-        if (sector_corr is None) or (not np.isfinite(sector_corr)):
-            sector_corr = 0.0
+        # Buy price heuristic: blend of EMA21, vwap_support, prior Darvas low
+        ema21        = float(df["EMA_21"].iloc[-1])
+        vwap_support = float(df["vwap_support"].iloc[-1])
+        darvas_low   = float(df["darvas_low"].iloc[-1]) if "darvas_low" in df.columns else np.nan
+        buy_price    = float(np.nanmean([ema21, vwap_support, darvas_low]))
 
         return {
             "Symbol": symbol,
             "VWAP Support": round(vwap_support, 2),
-            "ADX": round(adx, 2),
-            "Institutional Score": round(institutional_score, 2),
-            "Volume Weight": round(volume_weight, 2),
-            "Confidence Score": round(confidence_score, 2),
-            "Sector Correlation": round(sector_corr, 2),
-            "Trend": trend,
-            "Recommendation": recommendation,
-            "Darvas Breakout %": darvas_breakout_pct,
-            "Darvas Signal": darvas_signal,
+            "ADX": round(float(df["ADX_14"].iloc[-1]), 2),
+            "Institutional Score": round(float(df["institutional_score"].iloc[-1]), 2),
+            "Volume Weight": round(float(df["volume_weight"].iloc[-1]), 2),
+            "Confidence Score": round(float(df["confidence_score"].iloc[-1]), 2),
+            "Trend": str(df["HTF_Trend"].iloc[-1]),
+            "Recommendation": str(df["recommendation"].iloc[-1]),
+            "Darvas Breakout %": round(float(df["darvas_breakout_pct"].iloc[-1]), 2)
+                                    if "darvas_breakout_pct" in df.columns else 0.0,
+            "Darvas Signal": "✅" if int(df.get("darvas_signal", pd.Series([0])).iloc[-1]) == 1 else "❌",
             "Refined Buy Price": round(buy_price, 2),
+            "Market Stage": str(df.get("market_stage", pd.Series(["Neutral/Transition"])).iloc[-1]),
         }
 
     except Exception as e:

@@ -166,7 +166,12 @@ def analyze_symbol(symbol: str):
             weights = [1] * len(valid_prices)
         buy_price = round(np.average(valid_prices, weights=weights), 2)
 
-        print(f"[{symbol}] Buy Price Components — EMA21: {ema21:.2f}, VWAP: {vwap_support:.2f}, DarvasLow: {darvas_low:.2f}, BBLower: {bb_lower:.2f}, SwingLow: {swing_low:.2f} → Final: {buy_price:.2f}")
+        print(
+            f"[{symbol}] Buy Price Components — "
+            f"EMA21: {ema21:.2f}, VWAP: {vwap_support:.2f}, "
+            f"DarvasLow: {darvas_low:.2f}, BB_Lower: {bb_lower:.2f}, "
+            f"SwingLow: {swing_low:.2f} → Final: {buy_price:.2f}"
+        )
 
         # Bias toward fib retracement if lower than average
         if fib_61 < buy_price:
@@ -260,6 +265,7 @@ def analyze_symbol(symbol: str):
         sector_corr = float(df['sector_corr'].iloc[-1] or 0.0)
 
         return {
+            "Market Stage": str(df.get('market_stage', pd.Series(['Neutral/Transition'])).iloc[-1]) if 'market_stage' in df.columns else 'Neutral/Transition',
             "Symbol": symbol,
             "Refined Buy Price": buy_price,
             "VWAP Support": round(float(vwap_support), 2),

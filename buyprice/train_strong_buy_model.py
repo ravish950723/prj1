@@ -5,6 +5,11 @@ from sklearn.metrics import classification_report, roc_auc_score, average_precis
 from sklearn.calibration import CalibratedClassifierCV
 import joblib
 
+# === Add below your existing calibrated eval ===
+import json
+import numpy as np
+from sklearn.metrics import precision_recall_fscore_support
+
 # 1) Load ORIGINAL chronological data (no SMOTE)
 df = pd.read_csv("train_data.csv")
 
@@ -78,5 +83,33 @@ print("Holdout PR-AUC (cal):", average_precision_score(y_va, proba_cal))
 setattr(cal_model, "feature_names_in_", X.columns.to_numpy())
 
 # 7) Save calibrated model
-joblib.dump(cal_model, "strong_buy_xgb_model.pkl")
-print("✅ Saved calibrated strong_buy_xgb_model.pkl")
+joblib.dump(cal_model, "strong_buy_xgb_model_calibrated.pkl")
+print("✅ Saved calibrated strong_buy_xgb_model_calibrated.pkl")
+
+
+def sweep_thresholds(y_true, proba, target="f1", min_pos=1):
+    best = {"thr": None, "precision": 0, "recall": 0, "f1": 0}
+    for thr in np.linspace(0.05, 0.60, 56):  # 0.05 .. 0.60 step=0.01
+        pred = (proba >= thr).astype(int)
+        p, r, f1, _ = precision_recall_fscore_support(
+            y_true, pred, average="binary", zero_division=0
+        )
+        # optional: require some minimum positives predicted
+        if pred.sum() < min_pos:
+            continue
+        score = {"precision": p, "recall": r, "f1": f1}
+        if score[target] > best[target]:
+            best = {"thr": thr, **score}
+    return best
+
+best_f1 = sweep_thresholds(y_va, proba_cal, target="f1")
+best_rec = sweep_thresholds(y_va, proba_cal, target="recall")
+
+print("\n=== Threshold suggestions (calibrated, holdout) ===")
+print(f"Best F1: thr={best_f1['thr']:.2f} | P={best_f1['precision']:.3f} R={best_f1['recall']:.3f} F1={best_f1['f1']:.3f}")
+print(f"Max Recall: thr={best_rec['thr']:.2f} | P={best_rec['precision']:.3f} R={best_rec['recall']:.3f} F1={best_rec['f1']:.3f}")
+
+# save for live inference
+with open("strong_buy_thresholds.json", "w") as f:
+    json.dump({"best_f1": best_f1, "best_recall": best_rec}, f, indent=2)
+print("✅ Saved strong_buy_thresholds.json")
