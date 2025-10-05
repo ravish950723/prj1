@@ -1,5 +1,5 @@
 from data_fetcher import fetch_historical_data
-from final.sellprice.signals import _passes_rr_filter
+from utils import _passes_rr_filter
 from utils import log_signal, log_confidence_score, get_sector_info
 from datetime import date
 

@@ -26,6 +26,7 @@ def run_post_analysis():
         print("💾 Saved: signal_summary.csv")
 
         # Display
+        _print_top_by_stage(df, top_n=5)
         print("\n📊 Trade Signal Summary Table:\n")
         print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False))
 
@@ -49,3 +50,34 @@ def run_post_analysis():
 def _norm_type(t: str) -> str:
     t = (t or "").upper()
     return {"BUY","SELL","SHORT","WATCH"}.intersection({t}).pop() if t in {"BUY","SELL","SHORT","WATCH"} else "WATCH"
+
+
+
+def _print_top_by_stage(df_all, top_n=5):
+    # Keep only the Stage rows we logged from sell.py
+    stage_rows = df_all[(df_all['Signal'].str.startswith('Stage:')) & (df_all['Type'].str.upper() == 'WATCH')].copy()
+    if stage_rows.empty:
+        print("\n📭 No stage rows found.")
+        return
+
+    # Extract stage label
+    stage_rows['Stage'] = stage_rows['Signal'].str.replace('Stage:', '').str.strip()
+
+    def _bucket(label):
+        if label.startswith('Mark-Up'): return 'Mark-Up'
+        if label.startswith('Accumulation'): return 'Accumulation'
+        if label.startswith('Distribution'): return 'Distribution'
+        if label.startswith('Mark-Down'): return 'Mark-Down'
+        return 'Neutral/Transition'
+
+    stage_rows['Bucket'] = stage_rows['Stage'].apply(_bucket)
+
+    for bucket in ['Mark-Up', 'Accumulation', 'Distribution', 'Mark-Down', 'Neutral/Transition']:
+        sub = stage_rows[stage_rows['Bucket'] == bucket].nlargest(top_n, 'Confidence')
+        if sub.empty:
+            continue
+        print(f"\nTop {min(top_n, len(sub))} {bucket}:")
+        print(tabulate(sub[['Symbol','Date','Stage','Confidence']], headers='keys', tablefmt='fancy_grid', showindex=False))
+
+# Call this at the end of run_post_analysis(), after the existing prints:
+#   _print_top_by_stage(df)

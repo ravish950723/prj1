@@ -154,3 +154,31 @@ def print_signal_summary(min_confidence=0, signal_type=None):
 
 def log_confidence_score(score, reason):
     print(f"[CONFIDENCE] {reason}: {score:.1f}%")
+
+
+# final/sellprice/core.py
+
+def _passes_rr_filter(df, latest_row, min_rr: float = 2.0):
+    """
+    Simple risk:reward gate.
+    Expects the dataframe to have computed stop/target hints, or falls back to ATR-based stops.
+    - Risk  = entry - stop
+    - Reward = target - entry
+    Returns True when Reward/Risk >= min_rr and inputs make sense.
+    """
+    try:
+        price = float(latest_row["close"])
+
+        # Try optional columns first; fall back to ATR-based stop/target if unavailable
+        stop = float(latest_row.get("stop_price", price - 2.0 * float(df["atr"].iloc[-1])))
+        target = float(latest_row.get("target_price", price + 4.0 * float(df["atr"].iloc[-1])))
+
+        risk = price - stop
+        reward = target - price
+
+        if risk <= 0 or reward <= 0:
+            return False
+        return (reward / risk) >= min_rr
+    except Exception:
+        # If we can't compute a sensible R:R, fail safe (block)
+        return False
