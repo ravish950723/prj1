@@ -1,5 +1,5 @@
 from config import symbols
-from symbol_analysis import analyze_symbol, is_strong_buy_v2, model
+from compute import analyze_symbol_all
 from fetching import fetch_data_cached
 from compute import compute_indicators
 from backtest import evaluate_backtest_accuracy
@@ -37,13 +37,13 @@ import joblib, json
 HERE = Path(__file__).resolve().parent
 
 def load_model():
-    for name in ["strong_buy_xgb_model_calibrated.pkl", "strong_buy_xgb_model.pkl"]:
+    for name in ["strong_buy_xgb_model_calibrated.pkl"]:
         p = HERE / name
         if p.exists():
             m = joblib.load(p)
             print(f"✅ Loaded model: {p.name}")
             return m
-    print("❌ Model file not found.")
+    # print("❌ Model file not found.")
     return None
 
 def load_threshold(default=0.25):
@@ -265,9 +265,15 @@ def main():
 
     # First pass: analyze and collect base fields
     for symbol in symbols:
-        result = analyze_symbol(symbol)
+        result = analyze_symbol_all(symbol)
         if result:
+            ce = {k: result.get(k) for k in
+                  ("Candle Entry 2w", "Candle Entry 4w", "Candle Entry 6w", "Candle Entry 8w",
+                   "Candle Entry 12w", "Candle Entry 18w", "Candle Entry 30w")}
+            print(f"[{symbol}] Candle Entries → {ce}")
             summary.append(result)
+        # if result:
+        #     summary.append(result)
 
     if not summary:
         print("⚠️ No valid predictions could be generated.")
@@ -350,12 +356,20 @@ def main():
             res.setdefault("Model-Driven Buy", "❌")
             res.setdefault("Confidence Band", "WATCH")
 
+
         hit_list.append("✅" if hit else "❌")
         gain_list.append(round(gain, 2))
         days_list.append(days_to_peak if days_to_peak >= 0 else "N/A")
 
     # Prepare final DataFrame
     df_summary = pd.DataFrame(summary)
+    for col in [
+        "Candle Entry 2w", "Candle Entry 4w", "Candle Entry 6w", "Candle Entry 8w",
+        "Candle Entry 12w", "Candle Entry 18w", "Candle Entry 30w"
+    ]:
+        if col not in df_summary.columns:
+            df_summary[col] = np.nan
+
     df_summary["90D Hit"] = hit_list
     df_summary["90D Gain (%)"] = gain_list
     df_summary["Days to Peak"] = days_list
@@ -364,16 +378,16 @@ def main():
     df_summary.sort_values(by="Model Probability", ascending=False, inplace=True)
 
     columns_to_display = [
-        "Symbol", "Refined Buy Price", "VWAP Support", "ADX", "Institutional Score",
+        "Symbol", "Refined Buy Price", "Candle Entry 2w", "Candle Entry 4w",
+        "Candle Entry 6w", "Candle Entry 8w", "Candle Entry 12w", "Candle Entry 18w", "Candle Entry 30w",
+        "VWAP Support", "ADX", "Institutional Score",
         "Volume Weight", "Confidence Score", "Sector Correlation",
         "Trend", "Recommendation", "Darvas Breakout %", "Darvas Signal",
         "Rule-Based Buy", "Model-Driven Buy", "Model Probability",
         "Confidence Band", "Tech Fallback Score", "Signal",
         "90D Hit", "90D Gain (%)", "Days to Peak",
-        # New human-readable TA columns
         "EMA Uptrend", "EMA21 Slope", "ADX Strength", "MACD Cross", "RSI", "RSI State",
         "OBV Trend", "At BB Lower",
-        # Pattern flags
         "Volume Surge", "Near Support", "Signal Score",
         "SMC_Breakout", "Mean_Reversion", "Bullish_Engulfing", "Hammer", "Trend_Strength",
         "Market Stage",

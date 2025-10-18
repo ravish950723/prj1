@@ -2,9 +2,8 @@
 import os
 import pandas as pd
 from ib_insync import Stock, IB
-from config import CACHE_DIR, IB_CLIENT_ID
 
-from config import CACHE_DIR, IB_CLIENT_ID
+from config import CACHE_DIR, IB_CLIENT_ID,  IB_HOST, IB_PORT
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 
@@ -37,7 +36,8 @@ def fetch_data_cached(symbol: str, duration: str, bar_size: str, refresh: bool =
     ib = IB()
     try:
         # Connect (adjust port if you use live TWS: 7496)
-        ib.connect('127.0.0.1', 7497, clientId=IB_CLIENT_ID)
+        # ib.connect('127.0.0.1', 7497, clientId=IB_CLIENT_ID)
+        ib.connect(IB_HOST, IB_PORT, clientId=IB_CLIENT_ID)
         # For historical calls this isn’t required, but harmless if you lack live permissions:
         ib.reqMarketDataType(3)  # delayed-frozen ok
 

@@ -1,14 +1,15 @@
-import pandas as pd
-import numpy as np
-import pandas_ta as ta
 
-from config import symbol_to_sector, sector_etfs
+import pandas_ta as ta
 from fetching import fetch_data_cached
 from institutional_investor import score_institutional_investor
 from darvas import darvas_box_signal
+import numpy as np
+import pandas as pd
 
-# Toggle to see stage distributions & sanity checks in stdout
+
+
 DEBUG = False
+
 
 
 def _classify_market_stage(df: pd.DataFrame) -> pd.Series:
@@ -189,7 +190,7 @@ def compute_indicators(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
     return df
 
 
-def analyze_symbol(symbol: str):
+def analyze_symbol_all(symbol: str):
     """
     Return a compact dict of latest metrics for a symbol.
     NOTE: Sector correlation code remains in symbol_analysis.py; here we focus on indicator computation.
@@ -203,8 +204,9 @@ def analyze_symbol(symbol: str):
         vwap_support = float(df["vwap_support"].iloc[-1])
         darvas_low   = float(df["darvas_low"].iloc[-1]) if "darvas_low" in df.columns else np.nan
         buy_price    = float(np.nanmean([ema21, vwap_support, darvas_low]))
+        entries = candle_entries_multi(df, (2, 4, 6, 8, 12, 18, 30))
 
-        return {
+        result = {
             "Symbol": symbol,
             "VWAP Support": round(vwap_support, 2),
             "ADX": round(float(df["ADX_14"].iloc[-1]), 2),
@@ -214,11 +216,17 @@ def analyze_symbol(symbol: str):
             "Trend": str(df["HTF_Trend"].iloc[-1]),
             "Recommendation": str(df["recommendation"].iloc[-1]),
             "Darvas Breakout %": round(float(df["darvas_breakout_pct"].iloc[-1]), 2)
-                                    if "darvas_breakout_pct" in df.columns else 0.0,
+            if "darvas_breakout_pct" in df.columns else 0.0,
             "Darvas Signal": "✅" if int(df.get("darvas_signal", pd.Series([0])).iloc[-1]) == 1 else "❌",
             "Refined Buy Price": round(buy_price, 2),
             "Market Stage": str(df.get("market_stage", pd.Series(["Neutral/Transition"])).iloc[-1]),
         }
+
+        # Merge in candle entries
+        for weeks, price in entries.items():
+            result[f"Candle Entry {weeks}w"] = round(price, 2) if np.isfinite(price) else None
+
+        return result
 
     except Exception as e:
         print(f"⚠️ Error analyzing {symbol}: {e}")
@@ -233,3 +241,250 @@ def detect_smc_accumulation_breakout(df: pd.DataFrame) -> bool:
     breakout = df.iloc[-1]["close"] > recent["high"].max()
     volume_spike = df.iloc[-1]["volume"] > 1.5 * recent["volume"].mean()
     return bool(tight_range and breakout and volume_spike)
+
+
+# --- Candle-based entry (last ~6 weeks) ---
+def entry_from_recent_candles(df, weeks: int = 6) -> float:
+    """
+    Heuristic entry from recent candles:
+      • Start with confluence of EMA21/EMA50 zone
+      • If trend strong (ADX>=25 & EMA_uptrend), prefer pullback to EMA21
+      • Else prefer swing-low zone (min low in last N days)
+      • Require reversal hint: bullish engulfing or hammer (simple rules)
+      • Add small ATR buffer below computed anchor to avoid premature fills
+    """
+    if df is None or df.empty:
+        return float("nan")
+
+    look = min(len(df), weeks * 5)  # ~5 trading days per week
+    recent = df.tail(look).copy()
+
+    ema21  = float(recent["EMA_21"].iloc[-1])
+    ema50  = float(recent["EMA_50"].iloc[-1])
+    adx    = float(recent["ADX_14"].iloc[-1])
+    atr    = float(recent["ATR_14"].iloc[-1])
+    swing_low = float(recent["low"].min())
+
+    # Reversal hints (very lightweight)
+    last = recent.iloc[-1]
+    prev = recent.iloc[-2] if len(recent) > 1 else last
+    bullish_engulf = (last["close"] > last["open"]) and (prev["close"] < prev["open"]) and (last["close"] >= prev["open"]) and (last["open"] <= prev["close"])
+    lower_shadow   = (last["low"] < last["open"]) and (last["low"] < last["close"]) and ((min(last["open"], last["close"]) - last["low"]) > (last["high"] - max(last["open"], last["close"])))
+    hammer_like    = lower_shadow and (last["close"] > last["open"])
+
+    ema_confluence = 0.5 * (ema21 + ema50)
+    ema_up = bool(recent["EMA_uptrend"].iloc[-1])
+
+    if ema_up and adx >= 25:
+        anchor = 0.6 * ema21 + 0.4 * ema_confluence
+    else:
+        anchor = 0.5 * swing_low + 0.5 * ema_confluence
+
+    # If we saw a bullish reversal, bias entry slightly higher (to get filled in strength)
+    if bullish_engulf or hammer_like:
+        anchor = 0.7 * anchor + 0.3 * ema21
+
+    # Add a small safety buffer (enter slightly above the anchor)
+    entry = anchor + 0.15 * atr
+    return round(entry, 2)
+
+
+def _bullish_engulfing_recent(df):
+    if len(df) < 2:
+        return False
+    prev, curr = df.iloc[-2], df.iloc[-1]
+    return (
+        (prev["close"] < prev["open"]) and
+        (curr["close"] > curr["open"]) and
+        (curr["close"] >= prev["open"]) and
+        (curr["open"] <= prev["close"])
+    )
+
+def _hammer_like_recent(df):
+    if len(df) < 1:
+        return False
+    last = df.iloc[-1]
+    body = abs(last["close"] - last["open"])
+    lower_wick = (min(last["open"], last["close"]) - last["low"])
+    upper_wick = (last["high"] - max(last["open"], last["close"]))
+    return (lower_wick > 2 * body) and (upper_wick < body)
+
+
+# ================================
+# Candle-entry (BUY) price helpers
+# ================================
+
+
+
+def _safe_last(df, col, default=np.nan):
+    try:
+        return float(df[col].iloc[-1])
+    except Exception:
+        return float(default)
+
+def _nanfilter(values):
+    out = []
+    for v in values:
+        try:
+            if v is None:
+                continue
+            v = float(v)
+            if np.isfinite(v):
+                out.append(v)
+        except Exception:
+            pass
+    return out
+
+def _iqr_filter(vals):
+    """Remove extreme outliers via Tukey IQR. Keeps shape small & robust."""
+    if len(vals) < 4:
+        return vals
+    q1, q3 = np.percentile(vals, [25, 75])
+    iqr = q3 - q1
+    lo = q1 - 1.5 * iqr
+    hi = q3 + 1.5 * iqr
+    return [v for v in vals if lo <= v <= hi]
+
+def _weeks_to_days(weeks, max_len):
+    return int(max(5, min(max_len, int(weeks) * 5)))  # ~5 trading days per week
+
+def _buffer_by_weeks(weeks):
+    """
+    Limit price buffer below the composite support; shorter windows want a bigger buffer
+    to get filled quickly; longer windows can be more patient.
+    """
+    mapping = {
+        2:  0.20,
+        4:  0.15,
+        6:  0.12,
+        8:  0.10,
+        12: 0.08,
+        18: 0.06,
+        30: 0.05,
+    }
+    return float(mapping.get(int(weeks), 0.10))
+
+
+
+def candle_entry_from_weeks(df: pd.DataFrame, weeks: int = 6) -> float:
+    """
+    Robust limit BUY from last N weeks of daily candles.
+    Key hardening for short windows (2w/4w):
+      • enforce min lookback of 20 bars so ATR/BB exist
+      • ffill indicators inside the slice
+      • safe fallbacks if a component is missing
+    """
+    try:
+        if df is None or len(df) == 0:
+            return float("nan")
+
+        # --- Hardened lookback (2w/4w need at least ~20 bars for ATR_14 etc.)
+        min_bars = 20
+        look = max(min_bars, _weeks_to_days(weeks, len(df)))
+        recent = df.tail(look).copy()
+
+        # Forward-fill a few indicators inside the slice (helps right after gaps)
+        for col in ["EMA_21", "BB_lower", "ATR_14", "vwap_support", "darvas_low"]:
+            if col in recent.columns:
+                recent[col] = pd.to_numeric(recent[col], errors="coerce").ffill()
+
+        # Required bits (all safe)
+        last_close = _safe_last(recent, "close")
+        atr        = _safe_last(recent, "ATR_14", default=np.nan)
+        adx        = _safe_last(recent, "ADX_14", default=np.nan)
+        ema_up     = bool(recent.get("EMA_uptrend", pd.Series([False])).iloc[-1]) if "EMA_uptrend" in recent.columns else False
+
+        ema21      = _safe_last(recent, "EMA_21")
+        vwap_sup   = _safe_last(recent, "vwap_support")
+        darvas_lo  = _safe_last(recent, "darvas_low")
+        bb_lower   = _safe_last(recent, "BB_lower")
+        swing_low  = float(recent["low"].min()) if "low" in recent.columns else np.nan
+
+        # Candidate supports
+        candidates = _nanfilter([ema21, vwap_sup, darvas_lo, bb_lower, swing_low])
+        if not candidates:
+            return float("nan")
+
+        # Light outlier removal
+        candidates = _iqr_filter(candidates)
+
+        # Trend regime weighting
+        strong_trend = (adx >= 25) and ema_up
+        if strong_trend:
+            weights = {"ema21": 0.35, "vwap": 0.30, "darv": 0.15, "bb": 0.10, "swing": 0.10}
+        else:
+            weights = {"ema21": 0.20, "vwap": 0.30, "darv": 0.15, "bb": 0.20, "swing": 0.15}
+
+        vals, wts = [], []
+        def add(v, key):
+            if np.isfinite(v):
+                vals.append(float(v)); wts.append(weights[key])
+        add(ema21, "ema21"); add(vwap_sup, "vwap"); add(darvas_lo, "darv"); add(bb_lower, "bb"); add(swing_low, "swing")
+        if not vals:
+            return float("nan")
+
+        base = float(np.average(vals, weights=wts))
+
+        # 61.8% Fib cap (don’t chase)
+        high_n = float(recent["high"].max()) if "high" in recent.columns else np.nan
+        low_n  = float(recent["low"].min())  if "low"  in recent.columns else np.nan
+        if np.isfinite(high_n) and np.isfinite(low_n) and high_n > low_n:
+            fib_61 = low_n + 0.618 * (high_n - low_n)
+            base = min(base, fib_61)
+
+        # If near support, bias a touch higher to ensure fill
+        near_sup = bool(recent.get("near_support", pd.Series([False])).iloc[-1]) if "near_support" in recent.columns else False
+        if near_sup and np.isfinite(vwap_sup):
+            base = (base * 0.6) + (vwap_sup * 0.4)
+
+        # ATR buffer tuned by weeks; fallback to a tiny % if ATR NaN
+        buf_k = _buffer_by_weeks(weeks)
+        if np.isfinite(atr) and atr > 0:
+            entry = base - buf_k * atr
+        else:
+            entry = base * 0.99  # ~1% cushion if ATR missing
+
+        # A buy-limit should not be above last close
+        if np.isfinite(last_close):
+            entry = min(entry, last_close * 0.999)
+
+        # --- If the computed entry somehow still goes NaN for short windows,
+        #     use a conservative fallback based on the last ~20 bars.
+        if (not np.isfinite(entry)) or entry <= 0:
+            if int(weeks) in (2, 4):
+                # ultra-robust short-window fallback
+                lo = float(recent["low"].min()) if "low" in recent.columns else np.nan
+                ema21_f = _safe_last(recent, "EMA_21")
+                vwap_f  = _safe_last(recent, "vwap_support")
+                bb_f    = _safe_last(recent, "BB_lower")
+                # conservative anchor: the lowest of common supports + tiny ATR cushion
+                anchor_f = np.nanmin([ema21_f, vwap_f, bb_f, lo])
+                if np.isfinite(anchor_f):
+                    if np.isfinite(atr) and atr > 0:
+                        entry = anchor_f + 0.05 * atr   # small add so we’re above absolute lows
+                    else:
+                        entry = anchor_f * 1.01         # ~1% over the anchor if ATR missing
+            # still bad? give up to NaN and let caller print None
+
+
+        return round(entry, 2) if np.isfinite(entry) and entry > 0 else float("nan")
+    except Exception:
+        return float("nan")
+
+
+
+
+def candle_entries_multi(df: pd.DataFrame, weeks_list=(2, 4, 6, 8, 12, 18, 30)):
+    """
+    Vector convenience: compute entry prices for many windows at once.
+    Returns: {weeks: price}
+    """
+    out = {}
+    for w in weeks_list:
+        try:
+            out[int(w)] = candle_entry_from_weeks(df, int(w))
+        except Exception:
+            out[int(w)] = float("nan")
+    return out
+
+

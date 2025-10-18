@@ -1,28 +1,23 @@
+# Keep a single clean set:
 import numpy as np
 import pandas as pd
 from config import symbol_to_sector, sector_etfs
 from fetching import fetch_data_cached
-from compute import compute_indicators
+from compute import compute_indicators, candle_entries_multi
 from backtest import evaluate_backtest_accuracy
 from upward import detect_bullish_engulfing, detect_hammer
-from fetching import fetch_data_cached
-from compute import compute_indicators
-from backtest import evaluate_backtest_accuracy
-from config import symbol_to_sector, sector_etfs
-
-
-DEBUG = True
-
+from compute import analyze_symbol_all
 from xgboost import XGBClassifier
 import joblib
 import os
-from sklearn.preprocessing import StandardScaler
-import math
-import numpy as np
-import pandas as pd
+
+
 # Load pre-trained model if available (can be trained separately)
+
+
+DEBUG = True
 model = None
-model_path = os.path.join(os.path.dirname(__file__), "strong_buy_xgb_model.pkl")
+model_path = os.path.join(os.path.dirname(__file__), "strong_buy_xgb_model_calibrated.pkl")
 if os.path.exists(model_path):
     try:
         model = joblib.load(model_path)
@@ -264,6 +259,17 @@ def analyze_symbol(symbol: str):
 
         sector_corr = float(df['sector_corr'].iloc[-1] or 0.0)
 
+        # --- Candle-based entries for multiple windows ---
+        try:
+            entries_dict = candle_entries_multi(df, weeks_list=(6, 8, 12, 18, 30))
+        except Exception:
+            entries_dict = {6: float("nan"), 8: float("nan"), 12: float("nan"), 18: float("nan"), 30: float("nan")}
+
+        # optional: blend mean of valid entries into composite buy_price
+        _valid_entries = [v for v in entries_dict.values() if isinstance(v, (int, float)) and np.isfinite(v)]
+        if _valid_entries:
+            buy_price = round((buy_price + float(np.nanmean(_valid_entries))) / 2.0, 2)
+
         return {
             "Market Stage": str(df.get('market_stage', pd.Series(['Neutral/Transition'])).iloc[-1]) if 'market_stage' in df.columns else 'Neutral/Transition',
             "Symbol": symbol,
@@ -299,7 +305,13 @@ def analyze_symbol(symbol: str):
             "Volume Surge": volume_surge,
             "Near Support": near_support,
             "Signal Score": signal_score,
-            "Candle Pattern": candle_signal
+            "Candle Pattern": candle_signal,
+            "Candle Entry 6w": entries_dict.get(6, float("nan")),
+            "Candle Entry 8w": entries_dict.get(8, float("nan")),
+            "Candle Entry 12w": entries_dict.get(12, float("nan")),
+            "Candle Entry 18w": entries_dict.get(18, float("nan")),
+            "Candle Entry 30w": entries_dict.get(30, float("nan")),
+
         }
 
     except Exception as e:
