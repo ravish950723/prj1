@@ -1,14 +1,8 @@
 from ib_insync import Stock, MarketOrder
 from ib_connection import get_ib
 from data_fetcher import fetch_historical_data
-from indicators import calculate_indicators
-from tabulate import tabulate
-# from config import symbols, symbol_to_sector
 from config import symbols, symbol_to_sector, sector_map
-from config import symbols, symbol_to_sector, sector_map
-from datetime import date
-import csv
-import os
+
 
 # Global signal log file
 log_file = "trades_log.csv"
@@ -182,3 +176,34 @@ def _passes_rr_filter(df, latest_row, min_rr: float = 2.0):
     except Exception:
         # If we can't compute a sensible R:R, fail safe (block)
         return False
+
+
+# === Excel export helpers ===
+def export_signals_to_excel(xlsx_path: str = "signals_raw.xlsx") -> str:
+    """
+    Dump the in-memory `signal_storage` (raw, unfiltered) to an Excel workbook.
+    Returns the path written.
+    """
+    import pandas as pd
+    if not signal_storage:
+        # still write an empty file with headers so downstream automations don't break
+        cols = ["Symbol","Date","Signal","Confidence","Type","Condition","ATRpct","SizePct"]
+        pd.DataFrame(columns=cols).to_excel(xlsx_path, index=False)
+        print(f"💾 Saved (empty): {xlsx_path}")
+        return xlsx_path
+
+    df_raw = pd.DataFrame(signal_storage)
+    # Stable column order
+    cols = ["Symbol","Date","Signal","Confidence","Type","Condition","ATRpct","SizePct"]
+    for c in cols:
+        if c not in df_raw.columns:
+            df_raw[c] = None
+    df_raw = df_raw[cols]
+
+    # Excel output (requires openpyxl)
+    try:
+        df_raw.to_excel(xlsx_path, index=False)
+        print(f"💾 Saved: {xlsx_path}")
+    except Exception as e:
+        print(f"⚠️ Could not write {xlsx_path}: {e}")
+    return xlsx_path
