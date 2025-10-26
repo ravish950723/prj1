@@ -1,10 +1,333 @@
-Symbol,Date,Signal,Confidence,Type,Condition,ATRpct,SizePct
-EXPE,2025-10-17,OBV Divergence,76.1,SELL,OBV Divergence,4.27,0.76
-SLV,2025-10-17,Stage: Mark-Up,85.0,WATCH,STAGE,,
-BTBT,2025-10-17,Stage: Mark-Up,85.0,WATCH,STAGE,,
-CIFR,2025-10-17,Stage: Mark-Up,85.0,WATCH,STAGE,,
-BBAI,2025-10-17,Stage: Mark-Up,85.0,WATCH,STAGE,,
-GLD,2025-10-17,Stage: Mark-Up,85.0,WATCH,STAGE,,
-IONQ,2025-10-17,Stage: Mark-Up,65.0,WATCH,STAGE,,
-INTC,2025-10-17,Stage: Mark-Up,65.0,WATCH,STAGE,,
-EXPE,2025-10-17,Stage: Mark-Up,65.0,WATCH,STAGE,,
+Symbol,Date,Signal,Confidence,Type,Condition,ATRpct,SizePct,Pattern detected,Breakout
+BITB,2025-10-26,MACD Bearish below zero,52.5,SELL,MACD Bearish below zero,3.74,2.62,-,No
+BITW,2025-10-26,MACD Bearish below zero,52.5,SELL,MACD Bearish below zero,4.18,2.62,-,No
+IBIT,2025-10-26,MACD Bearish below zero,52.5,SELL,MACD Bearish below zero,3.76,2.62,-,No
+BITO,2025-10-26,MACD Bearish below zero,52.5,SELL,MACD Bearish below zero,3.8,2.62,-,No
+GBTC,2025-10-26,MACD Bearish below zero,52.5,SELL,MACD Bearish below zero,3.74,2.62,-,No
+CRPT,2025-10-26,MACD Bearish below zero,51.9,SELL,MACD Bearish below zero,5.4,2.59,-,No
+SNAP,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,4.16,2.5,-,No
+TDY,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,2.52,2.5,Double Bottom,No
+ESPO,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,1.47,2.5,Triple Bottom,No
+BAH,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,4.01,2.5,Double Bottom,No
+SE,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,4.93,2.5,Double Bottom,No
+NERD,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,1.68,2.5,Triple Bottom,No
+WB,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,3.58,2.5,Triple Bottom,No
+TDC,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,3.66,2.5,Triple Bottom,No
+NFLX,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,3.19,2.5,-,No
+BBW,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,4.22,2.5,-,No
+BZ,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,4.33,2.5,Triple Bottom,No
+SPOT,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,3.12,2.5,Triple Bottom,No
+CHKP,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,2.15,2.5,Double Bottom,No
+SIRI,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,3.26,2.5,Triple Bottom,No
+ACIW,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,2.83,2.5,-,No
+REPX,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,3.69,2.5,Double Bottom,No
+ROKU,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,4.41,2.5,-,No
+CPNG,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,2.24,2.5,Triple Bottom,No
+GLBE,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,3.76,2.5,Double Bottom,No
+UAL,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,4.91,2.5,-,No
+XYF,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,4.95,2.5,Double Bottom,No
+LEVI,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,4.09,2.5,-,No
+HERO,2025-10-26,MACD Bearish below zero,50.0,SELL,MACD Bearish below zero,2.26,2.5,Triple Bottom,No
+SATL,2025-10-24,SELL_TGT_6w:4.216,91.64,TARGET,SELL_TGT_6w,18.86,,,Yes
+SATL,2025-10-24,SELL_TGT_8w:4.216,91.64,TARGET,SELL_TGT_8w,18.86,,,Yes
+SATL,2025-10-24,SELL_TGT_12w:4.1534,88.79,TARGET,SELL_TGT_12w,18.86,,,Yes
+SATL,2025-10-24,SELL_TGT_18w:4.1534,88.79,TARGET,SELL_TGT_18w,18.86,,,Yes
+SATL,2025-10-24,SELL_TGT_30w:4.1534,88.79,TARGET,SELL_TGT_30w,18.86,,,Yes
+USAR,2025-10-24,SELL_TGT_6w:43.1136,82.92,TARGET,SELL_TGT_6w,22.53,,Double Bottom,No
+USAR,2025-10-24,SELL_TGT_8w:43.1136,82.92,TARGET,SELL_TGT_8w,22.53,,Double Bottom,No
+USAR,2025-10-24,SELL_TGT_12w:42.5361,80.47,TARGET,SELL_TGT_12w,22.53,,Double Bottom,No
+USAR,2025-10-24,SELL_TGT_18w:42.5361,80.47,TARGET,SELL_TGT_18w,22.53,,Double Bottom,No
+USAR,2025-10-24,SELL_TGT_30w:42.5361,80.47,TARGET,SELL_TGT_30w,22.53,,Double Bottom,No
+QUBT,2025-10-24,SELL_TGT_6w:25.2252,62.43,TARGET,SELL_TGT_6w,14.69,,,No
+QUBT,2025-10-24,SELL_TGT_8w:25.2252,62.43,TARGET,SELL_TGT_8w,14.69,,,No
+QUBT,2025-10-24,SELL_TGT_12w:24.8153,59.79,TARGET,SELL_TGT_12w,14.69,,,No
+QUBT,2025-10-24,SELL_TGT_18w:24.8153,59.79,TARGET,SELL_TGT_18w,14.69,,,No
+QUBT,2025-10-24,SELL_TGT_30w:24.8153,59.79,TARGET,SELL_TGT_30w,14.69,,,No
+RZLV,2025-10-24,SELL_TGT_6w:7.3779,56.31,TARGET,SELL_TGT_6w,9.95,,Inverse Head and Shoulders,No
+RZLV,2025-10-24,SELL_TGT_8w:7.3779,56.31,TARGET,SELL_TGT_8w,9.95,,Inverse Head and Shoulders,No
+TMC,2025-10-24,SELL_TGT_6w:11.1273,56.06,TARGET,SELL_TGT_6w,14.58,,,No
+TMC,2025-10-24,SELL_TGT_8w:11.1273,56.06,TARGET,SELL_TGT_8w,14.58,,,No
+TMC,2025-10-24,SELL_TGT_12w:10.9789,53.98,TARGET,SELL_TGT_12w,14.58,,,No
+TMC,2025-10-24,SELL_TGT_18w:10.9789,53.98,TARGET,SELL_TGT_18w,14.58,,,No
+TMC,2025-10-24,SELL_TGT_30w:10.9789,53.98,TARGET,SELL_TGT_30w,14.58,,,No
+RZLV,2025-10-24,SELL_TGT_12w:7.2432,53.46,TARGET,SELL_TGT_12w,9.95,,Inverse Head and Shoulders,No
+RZLV,2025-10-24,SELL_TGT_18w:7.2432,53.46,TARGET,SELL_TGT_18w,9.95,,Inverse Head and Shoulders,No
+RZLV,2025-10-24,SELL_TGT_30w:7.2432,53.46,TARGET,SELL_TGT_30w,9.95,,Inverse Head and Shoulders,No
+ADBE,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,,No
+NCNO,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,Double Bottom,Yes
+RPAY,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,Double Bottom,Yes
+LSPD,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,Triple Bottom,No
+PRGS,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,Triple Bottom,Yes
+VAC,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,,No
+AMGN,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,Triple Bottom,No
+BMBL,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,Double Bottom,No
+UNH,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,Triple Bottom,Yes
+DCBO,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,Double Bottom,Yes
+REPX,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,Double Bottom,No
+GLBE,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,Double Bottom,No
+AMPL,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,Double Bottom,Yes
+HLIT,2025-10-24,Stage: Accumulation,100.0,WATCH,STAGE,,,,No
+SNAP,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,,Yes
+FDIG,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+TER,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+CW,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+MSFT,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+CORZ,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+QTUM,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+PXH,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+FLYW,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Triple Bottom,No
+OUST,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+VRT,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+PATH,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+KTOS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+SHLD,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+SMLR,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,,Yes
+SPRX,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+MDB,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+F,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+GWRE,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+EXOD,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,,Yes
+ALNT,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Cup and Handle,No
+PSTG,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+SATS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+DFH,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,,Yes
+NBIS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Ascending Triangle,No
+TEM,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+BBAI,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+LHX,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+XNET,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Inverse Head and Shoulders,No
+BAH,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,Double Bottom,Yes
+TNL,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+III,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+CRWD,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Inverse Head and Shoulders,No
+BOTZ,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+DXPE,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+PLTR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+SATL,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,,Yes
+ZS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Inverse Head and Shoulders,No
+AGX,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+DMAT,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Inverse Head and Shoulders,No
+HII,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+CPAY,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,,Yes
+FIS,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,,Yes
+NUKZ,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+URNM,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+RR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+QNTM,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,,No
+ROBO,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+TTMI,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+ULCC,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,Double Bottom,No
+AVGO,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+LEU,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+AI,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,Triple Bottom,Yes
+QBTS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+BUG,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Double Bottom,Yes
+CPA,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+TDC,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,Triple Bottom,No
+VIPS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+MRVL,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+BKSY,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+NU,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+QS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+DXYZ,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,Double Bottom,Yes
+MISL,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+IREN,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+CYBR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+BK,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+INFY,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Cup and Handle,No
+CVV,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+LTBR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+RBRK,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Inverse Head and Shoulders,Yes
+LDOS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+TDOC,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+AMD,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Ascending Triangle,No
+PL,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+OBDC,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,,Yes
+INOD,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+WBTN,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+CPER,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+FICO,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Double Bottom,Yes
+CIFR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+JOBY,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+RUM,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,,No
+SPIR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+PPA,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+SPOT,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Triple Bottom,Yes
+SHOP,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+RDVT,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+INDS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+JBLU,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,Double Bottom,No
+AVAV,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+HOUS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+GBTG,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+VEEV,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+DGII,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+HUT,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+NDAQ,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Triple Bottom,No
+XOVR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+CRM,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Double Bottom,Yes
+CLSK,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+SNOW,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+TENB,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Double Bottom,Yes
+JOYY,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+CHKP,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Double Bottom,Yes
+XPER,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,,No
+MRCY,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+CCS,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,,Yes
+SIRI,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,Triple Bottom,No
+WULF,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+BILI,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+M,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+CIBR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+CVCO,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+HAS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Cup and Handle,No
+PLUS,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Double Bottom,Yes
+VRNS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+SOFI,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+PANW,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+OTEX,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+AMBA,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+ETSY,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+THNQ,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+BABA,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+APP,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Cup and Handle,No
+BTBT,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+ERJ,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Inverse Head and Shoulders,No
+ROKU,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+INTC,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+NLR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+HOOD,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+MAMA,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+BIDU,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+SNCY,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Double Bottom,No
+ACHR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+EBAY,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+TRU,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Triple Bottom,Yes
+META,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,Yes
+STNE,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Cup and Handle,No
+MU,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+HACK,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+OKLO,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+ARKQ,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+LUNR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+AAPL,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+CEG,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+ORCL,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+RIOT,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+CCJ,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Cup and Handle,No
+RVMD,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+PSN,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+S,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Triple Bottom,Yes
+GRPN,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Double Bottom,No
+GAMR,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,No
+TSM,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+URA,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+XYF,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Double Bottom,No
+GOOGL,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Cup and Handle,No
+FTNT,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Triple Bottom,No
+NET,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+BITO,2025-10-24,Stage: Mark-Down,85.0,WATCH,STAGE,,,,Yes
+ATAT,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+HOV,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Double Bottom,No
+SPNS,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Triple Bottom,Yes
+USD,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+WGMI,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+GRRR,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,,Yes
+STRL,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+HIVE,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+IBM,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+STCE,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Double Bottom,No
+OPEN,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+SETM,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,,No
+AMZN,2025-10-24,Stage: Accumulation,85.0,WATCH,STAGE,,,Double Bottom,Yes
+GOOG,2025-10-24,Stage: Mark-Up,85.0,WATCH,STAGE,,,Cup and Handle,No
+JNJ,2025-10-24,Stage: Distribution,80.0,WATCH,STAGE,,,,No
+TDY,2025-10-24,Stage: Accumulation,70.0,WATCH,STAGE,,,Double Bottom,No
+VST,2025-10-24,Stage: Mark-Up,70.0,WATCH,STAGE,,,Double Bottom,No
+COMP,2025-10-24,Stage: Mark-Up,70.0,WATCH,STAGE,,,Double Bottom,No
+CRPT,2025-10-24,Stage: Mark-Up,70.0,WATCH,STAGE,,,,No
+SE,2025-10-24,Stage: Accumulation,70.0,WATCH,STAGE,,,Double Bottom,No
+IONQ,2025-10-24,Stage: Mark-Up,70.0,WATCH,STAGE,,,,No
+CFLT,2025-10-24,Stage: Accumulation,70.0,WATCH,STAGE,,,,No
+NFLX,2025-10-24,Stage: Accumulation,70.0,WATCH,STAGE,,,,Yes
+GRND,2025-10-24,Stage: Accumulation,70.0,WATCH,STAGE,,,,Yes
+ESLT,2025-10-24,Stage: Mark-Up,70.0,WATCH,STAGE,,,,No
+AAL,2025-10-24,Stage: Mark-Up,70.0,WATCH,STAGE,,,Double Bottom,No
+BA,2025-10-24,Stage: Mark-Up,70.0,WATCH,STAGE,,,Triple Bottom,No
+SMCI,2025-10-24,Stage: Accumulation,70.0,WATCH,STAGE,,,Inverse Head and Shoulders,No
+ACIW,2025-10-24,Stage: Accumulation,70.0,WATCH,STAGE,,,,Yes
+LMT,2025-10-24,Stage: Accumulation,70.0,WATCH,STAGE,,,Triple Bottom,No
+HRTG,2025-10-24,Stage: Mark-Up,70.0,WATCH,STAGE,,,,No
+HEI,2025-10-24,Stage: Mark-Up,70.0,WATCH,STAGE,,,Double Bottom,No
+UAL,2025-10-24,Stage: Mark-Up,70.0,WATCH,STAGE,,,,No
+COIN,2025-10-24,Stage: Mark-Up,70.0,WATCH,STAGE,,,,No
+LEVI,2025-10-24,Stage: Accumulation,70.0,WATCH,STAGE,,,,No
+ESTC,2025-10-24,Stage: Accumulation,70.0,WATCH,STAGE,,,Double Bottom,Yes
+TMC,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+USAR,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,Double Bottom,No
+FI,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,,Yes
+GLD,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+SOUN,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+PLTK,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,,Yes
+ASA,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+ARM,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+IRDM,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,Double Bottom,Yes
+TTWO,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,,No
+LGIH,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,Triple Bottom,No
+EXPE,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,Triple Bottom,No
+PAR,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,Triple Bottom,Yes
+NEM,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+TSLA,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,Triple Bottom,No
+GFI,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,Double Bottom,No
+RGTI,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,Double Bottom,No
+ACN,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,,Yes
+EA,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,Triple Bottom,No
+FOUR,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,Inverse Head and Shoulders,Yes
+CHH,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,,Yes
+KBR,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,Triple Bottom,Yes
+VTEX,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,Triple Bottom,Yes
+RPD,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,,Yes
+KOPN,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+KGC,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,Double Bottom,No
+APLD,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,Double Bottom,No
+FRSH,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,Double Bottom,Yes
+ZTEK,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,,No
+TSAT,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+CELH,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+TME,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,Triple Bottom,No
+BTDR,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+QTWO,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,,Yes
+SERV,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+ASTS,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+VRSK,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,Double Bottom,Yes
+SLV,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,Double Bottom,No
+SYM,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+NEE,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,Double Bottom,No
+HUBS,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,Triple Bottom,Yes
+MARA,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+RKLB,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,,No
+ASGN,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,Double Bottom,Yes
+FMC,2025-10-24,Stage: Accumulation,65.0,WATCH,STAGE,,,Triple Bottom,No
+SPT,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,Double Bottom,Yes
+GDDY,2025-10-24,Stage: Mark-Down,65.0,WATCH,STAGE,,,Inverse Head and Shoulders,Yes
+QURE,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,Triple Bottom,No
+PBYI,2025-10-24,Stage: Mark-Up,65.0,WATCH,STAGE,,,Triple Bottom,No
+WB,2025-10-24,Stage: Distribution,60.0,WATCH,STAGE,,,Triple Bottom,No
+RZLV,2025-10-24,Stage: Distribution,60.0,WATCH,STAGE,,,Inverse Head and Shoulders,No
+BBW,2025-10-24,Stage: Distribution,60.0,WATCH,STAGE,,,,No
+RBLX,2025-10-24,Stage: Distribution,60.0,WATCH,STAGE,,,,No
+CPNG,2025-10-24,Stage: Distribution,60.0,WATCH,STAGE,,,Triple Bottom,No
+QUBT,2025-10-24,Stage: Distribution,60.0,WATCH,STAGE,,,,No
+U,2025-10-24,Stage: Accumulation,50.0,WATCH,STAGE,,,,No
+ESPO,2025-10-24,Stage: Distribution,50.0,WATCH,STAGE,,,Triple Bottom,No
+NERD,2025-10-24,Stage: Distribution,50.0,WATCH,STAGE,,,Triple Bottom,No
+BZ,2025-10-24,Stage: Distribution,50.0,WATCH,STAGE,,,Triple Bottom,No
+MP,2025-10-24,Stage: Accumulation,50.0,WATCH,STAGE,,,,No
+SMR,2025-10-24,Stage: Accumulation,50.0,WATCH,STAGE,,,,No
+BITW,2025-10-24,Stage: Distribution,50.0,WATCH,STAGE,,,,No
+DOMO,2025-10-24,Stage: Accumulation,50.0,WATCH,STAGE,,,,No
+DASH,2025-10-24,Stage: Distribution,50.0,WATCH,STAGE,,,,No
+TNDM,2025-10-24,Stage: Accumulation,50.0,WATCH,STAGE,,,,No
+HCAT,2025-10-24,Stage: Accumulation,50.0,WATCH,STAGE,,,Cup and Handle,No
+CNC,2025-10-24,Stage: Mark-Down,50.0,WATCH,STAGE,,,,Yes
+HERO,2025-10-24,Stage: Accumulation,50.0,WATCH,STAGE,,,Triple Bottom,No
