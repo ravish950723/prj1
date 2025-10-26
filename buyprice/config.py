@@ -25,8 +25,40 @@ UPWARD_SIGNAL_WEIGHTS = {
     "min_signals": 2,
 }
 
-symbols = ['AMBA', 'ARQQ', 'ASTS', 'BBAI', 'BTBT', 'CIFR', 'EXPE', 'RNGR',  'SLYG',
-           'VB', 'VBK', 'VEA', 'VTWO']
+symbols = [
+    # Individual Stocks
+    "AAL", "AAPL", "ACIW", "ACN", "ACHR", "ADBE", "AGX", "AI", "ALNT", "AMD",
+    "AMBA", "AMGN", "AMPL", "AMZN", "APLD", "APP", "ARM", "ARKQ", "ASA", "ASGN",
+    "ASTS", "ATAT", "AVAV", "AVGO", "BA", "BAH", "BABA", "BBW", "BBAI", "BIDU",
+    "BILI", "BITB", "BITO", "BITQ", "BITW", "BK", "BKSY", "BMBL", "BOTZ", "BTBT",
+    "BTDR", "BUG", "BZ", "CFLT", "CCJ", "CCS", "CEG", "CELH", "CHH", "CHKP", "CIBR",
+    "CIFR", "CLSK",  "CNC", "COIN", "COMP", "CORZ", "CPA", "CPAY", "CPER",
+    "CPNG", "CRPT", "CRM", "CRWD", "CVCO", "CVV", "CYBR", "CW", "DASH", "DCBO",
+    "DFH", "DGII", "DMAT", "DOMO", "DXYZ", "DXPE", "EA", "EBAY", "ERJ", "ESLT",
+    "ESPO", "ESTC", "ETSY", "EXOD", "EXPE", "F", "FDIG", "FICO", "FI", "FIS",
+    "FLYW",  "FMC", "FOUR", "FRSH", "FTNT", "GAMR", "GBTC", "GBTG", "GDDY",
+    "GFI", "GLBE", "GLD", "GOOG", "GOOGL", "GRND", "GRPN", "GRRR", "GTI", "GWRE",
+    "HACK", "HAS", "HCAT", "HEI", "HERO", "HII", "HLIT", "HOOD", "HOV", "HOUS",
+    "HRTG", "HIVE", "HUBS", "HUT", "IBIT", "IBM", "INDS", "INFY", "INOD", "INTC",
+    "IONQ", "IREN", "IRDM", "III", "JNJ", "JOBY", "JOYY", "JBLU", "KBR", "KGC",
+    "KOPN", "KTOS", "LDOS", "LEU", "LEVI", "LGIH", "LHX", "LMT", "LTBR",
+    "LSPD", "LUNR", "M", "MAMA", "MARA", "MDB", "META", "MISL", "MP", "MRVL",
+    "MRCY", "MSFT", "MU", "NDAQ", "NBIS", "NCNO", "NEM", "NERD", "NET", "NEE",
+    "NFLX", "NLR",  "NU", "NUKZ", "OBDC", "OKLO",
+    "OPEN", "ORCL", "OTEX", "OUST", "PBYI", "PANW", "PAR", "PATH", "PPA", "PSTG",
+    "PLUS", "PL", "PLTK", "PLTR", "PRGS", "PSN", "PXH", "QBTS", "QNTM", "QTUM",
+    "QTWO", "QUBT", "QS", "QURE", "RDVT", "RBLX", "RBRK", "REPX", "RIOT", "RKLB",
+    "RGTI", "ROBO", "ROKU", "RPAY", "RPD", "RR", "RVMD", "RUM", "RZLV", "S",
+    "SABR", "SATL", "SATS", "SE", "SERV", "SETM", "SHLD", "SHOP", "SIRI", "SLV",
+    "SMCI", "SMR", "SMLR", "SNCY", "SNAP", "SNOW", "SOFI", "SOUN", "SPNS", "SPOT",
+    "SPRX", "SPT", "SPIR", "SPRX", "SPOT", "SPRX", "SPRX", "SPRX", "STCE",
+    "STNE", "STRL", "SYM", "TDOC", "TDC", "TDY", "TEM", "TENB", "TER", "THNQ",
+    "TMC", "TME", "TNDM", "TNL",  "TRU", "TSAT", "TSLA", "TSM", "TTMI",
+    "TTWO", "UAL", "U", "ULCC", "UNH", "URA", "URNM", "USD", "USAR", "VAC",
+    "VEEV", "VIPS", "VRNS", "VRSK", "VRT", "VST", "VTEX", "WB", "WGMI", "WBTN",
+    "WULF", "XNET", "XOVR", "XPER", "XYF", "ZTEK", "ZS"
+]
+
 
 
 symbol_to_sector = {'AMBA': 'Semiconductor', 'ARQQ': 'Tech', 'ASTS': 'Satellite', 'BBAI': 'AI', 'BTBT': 'CryptoMining',

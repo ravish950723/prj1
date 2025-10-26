@@ -288,7 +288,7 @@ def main():
     for res in summary:
         symbol = res["Symbol"]
         try:
-            df = fetch_data_cached(symbol, duration='3 Y', bar_size='1 day')
+            df = fetch_data_cached(symbol, duration='3 Y', bar_size='1 day', refresh=True)
             df = compute_indicators(df, symbol=symbol)
 
             # Pattern/price-action signals

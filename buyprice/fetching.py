@@ -27,6 +27,22 @@ def _resolve_contract(ib: IB, symbol: str):
 def fetch_data_cached(symbol: str, duration: str, bar_size: str, refresh: bool = False) -> pd.DataFrame:
     cache_file = os.path.join(CACHE_DIR, f"{symbol}_{duration}_{bar_size}.csv")
 
+    # --- NEW: auto-refresh if cache is old (not from today's date)
+    if os.path.exists(cache_file):
+        try:
+            cached_df = pd.read_csv(cache_file, parse_dates=["date"]).sort_values("date")
+            last_date = cached_df["date"].iloc[-1]
+            # if last bar isn't today, treat as stale
+            stale = (pd.Timestamp.utcnow().normalize() > last_date.normalize())
+        except Exception:
+            stale = True
+    else:
+        stale = True
+
+    if not refresh and not stale:
+        print(f"[{symbol}] 🔁 Using cached data for {duration} - {bar_size}")
+        return cached_df
+
     if not refresh and os.path.exists(cache_file):
         print(f"[{symbol}] 🔁 Using cached data for {duration} - {bar_size}")
         df = pd.read_csv(cache_file, parse_dates=["date"]).sort_values("date")
