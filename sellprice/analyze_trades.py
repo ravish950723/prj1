@@ -63,7 +63,7 @@ def run_post_analysis():
             df.sort_values(sort_cols, ascending=sort_asc, inplace=True)
 
         # Guarantee stable Summary columns (adds ATRpct if missing)
-        summary_cols = ["Symbol","Date","Signal","Confidence","Type","Condition","ATRpct","SizePct"]
+        summary_cols = ["Symbol","Date","Signal","Confidence","Type","Condition","ATRpct","SizePct","Pattern detected","Breakout"]
         for c in summary_cols:
             if c not in df.columns:
                 df[c] = pd.NA

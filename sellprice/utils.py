@@ -2,10 +2,39 @@ from ib_insync import Stock, MarketOrder
 from ib_connection import get_ib
 from data_fetcher import fetch_historical_data
 from config import symbols, symbol_to_sector, sector_map
-
+import csv
+from pathlib import Path
 
 # Global signal log file
 log_file = "trades_log.csv"
+
+def _ensure_log_header(path, new_fieldnames):
+    """
+    If the existing CSV header is missing columns, rewrite the file with the new header
+    and preserve existing rows (filling missing columns with blanks).
+    """
+    import csv, os, io
+    if not os.path.exists(path):
+        return
+    with open(path, "r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        old_fieldnames = reader.fieldnames or []
+        if not set(new_fieldnames).issuperset(set(old_fieldnames)):
+            # Don't remove any old columns
+            return
+        # If headers already match exactly (order can differ), do nothing
+        if set(old_fieldnames) == set(new_fieldnames):
+            return
+        rows = list(reader)
+
+    # Rewrite with new header and updated rows
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=new_fieldnames)
+        writer.writeheader()
+        for r in rows:
+            for k in new_fieldnames:
+                r.setdefault(k, None)
+            writer.writerow(r)
 signal_storage = []  # In-memory storage to avoid duplicates in runtime
 
 
@@ -70,55 +99,61 @@ def _normalize_signal_type(t: str) -> str:
     return aliases.get(t, t if t in {"BUY", "SELL", "SHORT", "WATCH"} else "WATCH")
 
 
-import csv
-import os
 
-# ... keep your other imports / globals ...
-
-def log_signal(symbol, date_str, reason, confidence, signal_type="WATCH", condition=None, **extras):
-    # Normalize
-    signal_type = _normalize_signal_type(signal_type)
-
-    # Compose entry (allow extras like ATRpct, SizePct)
-    entry = {
+def log_signal(symbol, date_str, message, confidence, signal_type="WATCH", condition="", ATRpct=None, extras=None, **kwargs):
+    """
+    Append a signal row into signals_raw.csv.
+    - 'extras' is a dict of additional columns to write, e.g. {"Pattern detected": "...", "Breakout": "..."}.
+    - Always includes 'Pattern detected' and 'Breakout' columns in the CSV header.
+    """
+    out = {
         "Symbol": symbol,
         "Date": date_str,
-        "Signal": reason,
+        "Signal": message,
         "Confidence": confidence,
         "Type": signal_type,
-        "Condition": condition or "-",
+        "Condition": condition,
+        "ATRpct": ATRpct,
+        # Ensure these two columns always exist:
+        "Pattern detected": None,
+        "Breakout": None,
     }
-    entry.update(extras)
+    # Merge direct kwargs (e.g., SizePct) into the row
+    if kwargs:
+        for k, v in kwargs.items():
+            out[k] = v
 
-    # De-dupe: same Symbol/Date/Signal/Type/Condition
-    global signal_storage
-    if not any(
-        e.get("Symbol") == entry["Symbol"] and
-        e.get("Date") == entry["Date"] and
-        e.get("Signal") == entry["Signal"] and
-        e.get("Type") == entry["Type"] and
-        (e.get("Condition") or "-") == entry["Condition"]
-        for e in signal_storage
-    ):
-        signal_storage.append(entry)
+    # Merge extras (if any) into the row
+    if extras and isinstance(extras, dict):
+        for k, v in extras.items():
+            out[k] = v
 
-        write_header = not os.path.exists(log_file)
-        with open(log_file, mode="a", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(
-                f,
-                fieldnames=[
-                    "Symbol", "Date", "Signal", "Confidence", "Type",
-                    "Condition", "ATRpct", "SizePct"
-                ]
-            )
-            if write_header:
-                writer.writeheader()
-            out = dict(entry)
-            out["ATRpct"] = entry.get("ATRpct")
-            out["SizePct"] = entry.get("SizePct")
-            writer.writerow(out)
-        print(f"[LOG] {symbol} {signal_type}: {reason} ({confidence}%)")
+    # Establish field order. Put the standard fields first, then any other extras (stable order)
+    base_fields = [
+        "Symbol", "Date", "Signal", "Confidence", "Type", "Condition", "ATRpct",
+        "Pattern detected", "Breakout"
+    ]
+    extra_fields = [k for k in out.keys() if k not in base_fields]
+    fieldnames = base_fields + extra_fields
+    # Evolve header if needed
+    csv_path = Path("signals_raw.csv")
+    _ensure_log_header(str(csv_path), fieldnames)
+# or your existing path for the raw signals CSV if different
+    file_exists = csv_path.exists()
 
+    # If file exists, we won't rewrite the header line, but we can still write rows
+    # with a superset of columns; pandas will pick them up on future reads.
+    with csv_path.open("a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(out)
+
+    # Also keep an in-memory copy for post-analysis
+    try:
+        signal_storage.append(out)
+    except Exception as e:
+        print(f"[WARN] Could not append to signal_storage: {e}")
 
 
 def print_signal_summary(min_confidence=0, signal_type=None):
@@ -130,6 +165,7 @@ def print_signal_summary(min_confidence=0, signal_type=None):
     if not filtered:
         print("📭 No signals to summarize.")
         return []        # <-- return an empty list instead of None
+
 
     print("📊 Signal Summary:")
     headers = ["Symbol", "Date", "Signal", "Confidence", "Type", "Condition"]
@@ -187,14 +223,14 @@ def export_signals_to_excel(xlsx_path: str = "signals_raw.xlsx") -> str:
     import pandas as pd
     if not signal_storage:
         # still write an empty file with headers so downstream automations don't break
-        cols = ["Symbol","Date","Signal","Confidence","Type","Condition","ATRpct","SizePct"]
+        cols = ["Symbol","Date","Signal","Confidence","Type","Condition","ATRpct","SizePct","Pattern detected","Breakout"]
         pd.DataFrame(columns=cols).to_excel(xlsx_path, index=False)
         print(f"💾 Saved (empty): {xlsx_path}")
         return xlsx_path
 
     df_raw = pd.DataFrame(signal_storage)
     # Stable column order
-    cols = ["Symbol","Date","Signal","Confidence","Type","Condition","ATRpct","SizePct"]
+    cols = ["Symbol","Date","Signal","Confidence","Type","Condition","ATRpct","SizePct","Pattern detected","Breakout"]
     for c in cols:
         if c not in df_raw.columns:
             df_raw[c] = None
