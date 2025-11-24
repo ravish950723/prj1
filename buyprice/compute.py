@@ -5,6 +5,10 @@ from institutional_investor import score_institutional_investor
 from darvas import darvas_box_signal
 import numpy as np
 import pandas as pd
+from macro_features import enrich_with_macro_features
+import numpy as np
+import pandas as pd
+import pandas_ta as ta
 
 
 
@@ -66,44 +70,50 @@ def _classify_market_stage(df: pd.DataFrame) -> pd.Series:
 
 
 def compute_indicators(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
-    """
-    Compute a broad set of indicators used downstream.
-    Assumes df has columns: date, open, high, low, close, volume.
-    Returns the same df with indicator columns appended, including 'market_stage'.
-    """
-    df = df.copy()
-
-    # Normalize core price/vol types early
-    for col in ["open", "high", "low", "close", "volume"]:
-        df[col] = pd.to_numeric(df.get(col), errors="coerce")
-
     # === Core Trend & Momentum Indicators ===
-    df["EMA_20"]  = ta.ema(df["close"], length=20)
-    df["EMA_21"]  = ta.ema(df["close"], length=21)
-    df["EMA_50"]  = ta.ema(df["close"], length=50)
+    df["EMA_20"] = ta.ema(df["close"], length=20)
+    df["EMA_21"] = ta.ema(df["close"], length=21)
+    df["EMA_50"] = ta.ema(df["close"], length=50)
     df["EMA_200"] = ta.ema(df["close"], length=200)
 
+    # ADX (safe)
     adx = ta.adx(df["high"], df["low"], df["close"], length=14)
-    df["ADX_14"] = pd.to_numeric(adx["ADX_14"], errors="coerce")
+    if adx is None or "ADX_14" not in getattr(adx, "columns", []):
+        df["ADX_14"] = pd.Series([np.nan] * len(df), index=df.index)
+    else:
+        df["ADX_14"] = pd.to_numeric(adx["ADX_14"], errors="coerce")
 
+    # MACD (safe)
     macd = ta.macd(df["close"])
-    df["MACD"]            = pd.to_numeric(macd["MACD_12_26_9"], errors="coerce")
-    df["MACD_signal"]     = pd.to_numeric(macd["MACDs_12_26_9"], errors="coerce")
-    df["MACD_hist"]       = pd.to_numeric(macd["MACDh_12_26_9"], errors="coerce")
+    if macd is None:
+        df["MACD"] = df["MACD_signal"] = df["MACD_hist"] = pd.Series([np.nan] * len(df), index=df.index)
+    else:
+        df["MACD"] = pd.to_numeric(macd.get("MACD_12_26_9"), errors="coerce")
+        df["MACD_signal"] = pd.to_numeric(macd.get("MACDs_12_26_9"), errors="coerce")
+        df["MACD_hist"] = pd.to_numeric(macd.get("MACDh_12_26_9"), errors="coerce")
+
     df["MACD_hist_slope"] = df["MACD_hist"].diff().rolling(3).mean()
-    df["MACD_crossover"]  = (df["MACD_hist"] > 0) & (df["MACD_hist"].shift(1) < 0)
+    df["MACD_crossover"] = (df["MACD_hist"] > 0) & (df["MACD_hist"].shift(1) < 0)
 
-    df["RSI_14"]   = ta.rsi(df["close"], length=14)
+    # RSI/OBV (safe)
+    rsi = ta.rsi(df["close"], length=14)
+    df["RSI_14"] = pd.to_numeric(rsi, errors="coerce")
     df["RSI_slope"] = df["RSI_14"].diff().rolling(3).mean()
-    df["OBV"]       = ta.obv(df["close"], df["volume"])
+    obv = ta.obv(df["close"], df["volume"])
+    df["OBV"] = pd.to_numeric(obv, errors="coerce")
 
+    # Bollinger Bands (safe)
     bb = ta.bbands(df["close"], length=20)
-    df[["BB_upper", "BB_middle", "BB_lower"]] = bb[["BBU_20_2.0", "BBM_20_2.0", "BBL_20_2.0"]]
+    if bb is None:
+        df[["BB_upper", "BB_middle", "BB_lower"]] = pd.DataFrame(
+            [[np.nan, np.nan, np.nan]] * len(df), index=df.index
+        )
+    else:
+        df[["BB_upper", "BB_middle", "BB_lower"]] = bb[["BBU_20_2.0", "BBM_20_2.0", "BBL_20_2.0"]]
 
-    # === Volatility Metrics ===
-    df["ATR_14"]   = ta.atr(df["high"], df["low"], df["close"], length=14)
-    df["BB_width"] = df["BB_upper"] - df["BB_lower"]
-    df["return_std"] = df["close"].pct_change().rolling(10).std()
+    # ATR (safe)
+    atr = ta.atr(df["high"], df["low"], df["close"], length=14)
+    df["ATR_14"] = pd.to_numeric(atr, errors="coerce")
 
     # === Trend Confirmation ===
     df["EMA_21_slope"] = df["EMA_21"].diff().rolling(5).mean()
@@ -145,6 +155,45 @@ def compute_indicators(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
 
     # === Sector Rotation Strength (placeholder for future enhancement) ===
     df["sector_outperformance"] = 0.0
+    # === Multi-timeframe Volume Profiles ===
+    for win in (5, 20, 60):
+        roll = df["volume"].rolling(win, min_periods=1)
+        df[f"vol_mean_{win}"] = roll.mean()
+        df[f"vol_z_{win}"] = (df["volume"] - df[f"vol_mean_{win}"]) / (roll.std() + 1e-9)
+
+    df["vol_ratio_5_20"] = df["vol_mean_5"] / (df["vol_mean_20"] + 1e-9)
+    df["vol_ratio_20_60"] = df["vol_mean_20"] / (df["vol_mean_60"] + 1e-9)
+
+    # Symbol-only volatility regime (even if macro fetch fails)
+    sym_ret = df["close"].pct_change()
+    sym_vol_20 = sym_ret.rolling(20).std()
+    sym_vol_250 = sym_ret.rolling(250).std()
+    df["sym_vol_ratio"] = sym_vol_20 / (sym_vol_250 + 1e-9)
+
+    # Fractal swing points & liquidity zones
+    df = _compute_fractals(df)
+    liq_sup, liq_res = _compute_liquidity_zones(df, lookback=60, bins=24)
+    df["liq_support"] = liq_sup
+    df["liq_resistance"] = liq_res
+
+
+    def _sym_regime(x):
+        if not np.isfinite(x):
+            return 0
+        if x >= 1.5:
+            return 1
+        if x <= 0.7:
+            return -1
+        return 0
+
+    df["sym_vol_regime"] = df["sym_vol_ratio"].apply(_sym_regime)
+
+    # === Macro overlay (VIX, QQQ, TLT, macro vol regimes) ===
+    try:
+        df = enrich_with_macro_features(df)
+    except Exception as e:
+        if DEBUG:
+            print(f"[compute] macro feature enrichment failed: {e}")
 
     # === Composite Signal Score ===
     df["signal_score"] = (
@@ -196,7 +245,7 @@ def analyze_symbol_all(symbol: str):
     NOTE: Sector correlation code remains in symbol_analysis.py; here we focus on indicator computation.
     """
     try:
-        df = fetch_data_cached(symbol, "3 Y", "1 day", refresh=True)
+        df = fetch_data_cached(symbol, "10 Y", "1 day", force_refresh=True)
         df = compute_indicators(df, symbol=symbol)
 
         # Buy price heuristic: blend of EMA21, vwap_support, prior Darvas low
@@ -364,6 +413,75 @@ def _buffer_by_weeks(weeks):
     }
     return float(mapping.get(int(weeks), 0.10))
 
+def _compute_liquidity_zones(df: pd.DataFrame, lookback: int = 60, bins: int = 24):
+    """
+    Approximate volume-based liquidity zones using a volume-weighted price histogram.
+    Returns (support_zone_price, resistance_zone_price).
+    """
+    recent = df.tail(lookback)
+    if recent.empty or "volume" not in recent.columns or "close" not in recent.columns:
+        return np.nan, np.nan
+
+    typical_price = (recent["high"] + recent["low"] + recent["close"]) / 3.0
+    vol = recent["volume"]
+
+    lo = float(typical_price.min())
+    hi = float(typical_price.max())
+    if not np.isfinite(lo) or not np.isfinite(hi) or lo >= hi:
+        return np.nan, np.nan
+
+    hist, edges = np.histogram(typical_price, bins=bins, range=(lo, hi), weights=vol)
+    if hist.sum() <= 0:
+        return np.nan, np.nan
+
+    # take top 3 volume nodes
+    idxs = hist.argsort()[::-1][:3]
+    centers = 0.5 * (edges[idxs] + edges[idxs + 1])
+
+    cur = recent["close"].iloc[-1]
+    below = [c for c in centers if c <= cur]
+    above = [c for c in centers if c >= cur]
+
+    support = max(below) if below else np.nan
+    resistance = min(above) if above else np.nan
+    return float(support), float(resistance)
+
+
+def _compute_fractals(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Bill Williams-style fractal highs/lows to identify swing points.
+    Populates: fract_high, fract_low, fract_last_low.
+    """
+    n = len(df)
+    if n < 5:
+        df["fract_high"] = 0
+        df["fract_low"] = 0
+        df["fract_last_low"] = np.nan
+        return df
+
+    high_fractal = np.zeros(n, dtype=int)
+    low_fractal = np.zeros(n, dtype=int)
+
+    for i in range(2, n - 2):
+        hwin = df["high"].iloc[i-2:i+3]
+        lwin = df["low"].iloc[i-2:i+3]
+        if hwin.iloc[2] == hwin.max():
+            high_fractal[i] = 1
+        if lwin.iloc[2] == lwin.min():
+            low_fractal[i] = 1
+
+    df["fract_high"] = high_fractal
+    df["fract_low"] = low_fractal
+
+    # last swing low (support)
+    idxs_low = np.where(low_fractal == 1)[0]
+    last_low_price = np.nan
+    if len(idxs_low):
+        last_low_idx = idxs_low[-1]
+        last_low_price = float(df["low"].iloc[last_low_idx])
+
+    df["fract_last_low"] = last_low_price
+    return df
 
 
 def candle_entry_from_weeks(df: pd.DataFrame, weeks: int = 6) -> float:
@@ -415,6 +533,39 @@ def candle_entry_from_weeks(df: pd.DataFrame, weeks: int = 6) -> float:
         else:
             weights = {"ema21": 0.20, "vwap": 0.30, "darv": 0.15, "bb": 0.20, "swing": 0.15}
 
+        # Additional anchors: fractal last low & liquidity support
+        fract_low = float(recent.get("fract_last_low", pd.Series([np.nan])).iloc[-1]) if "fract_last_low" in recent.columns else np.nan
+        liq_support = float(recent.get("liq_support", pd.Series([np.nan])).iloc[-1]) if "liq_support" in recent.columns else np.nan
+
+        # Extend weights to include these if present
+        if "fract" not in weights:
+            # keep overall sum ~1; slight rebalancing
+            weights.update({"fract": 0.10, "liq": 0.10})
+            # rescale old ones a bit
+            for k in ("ema21", "vwap", "darv", "bb", "swing"):
+                weights[k] *= 0.8  # shrink a bit to make room
+
+        vals, wts = [], []
+
+        def add(v, key):
+            if np.isfinite(v):
+                vals.append(float(v))
+                wts.append(weights[key])
+
+        add(ema21, "ema21")
+        add(vwap_sup, "vwap")
+        add(darvas_lo, "darv")
+        add(bb_lower, "bb")
+        add(swing_low, "swing")
+        add(fract_low, "fract")
+        add(liq_support, "liq")
+
+        if not vals:
+            return float("nan")
+
+        base = float(np.average(vals, weights=wts))
+
+
         vals, wts = [], []
         def add(v, key):
             if np.isfinite(v):
@@ -441,6 +592,13 @@ def candle_entry_from_weeks(df: pd.DataFrame, weeks: int = 6) -> float:
         buf_k = _buffer_by_weeks(weeks)
         if np.isfinite(atr) and atr > 0:
             entry = base - buf_k * atr
+            # Volatility regime conditioning: deeper discount in high vol, shallower in low vol
+            sym_reg = float(
+                recent.get("sym_vol_regime", pd.Series([0])).iloc[-1]) if "sym_vol_regime" in recent.columns else 0
+            if sym_reg == 1:  # high vol
+                buf_k *= 1.2
+            elif sym_reg == -1:  # low vol
+                buf_k *= 0.8
         else:
             entry = base * 0.99  # ~1% cushion if ATR missing
 

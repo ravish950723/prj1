@@ -1,11 +1,17 @@
-from config import symbols
+
 from compute import analyze_symbol_all
+import numpy as np
+import os, joblib
+import joblib, json
+
+import argparse
+import pandas as pd
+from config import symbols
 from fetching import fetch_data_cached
 from compute import compute_indicators
 from backtest import evaluate_backtest_accuracy
-import pandas as pd
-import numpy as np
-import argparse
+from eps_features import fetch_quarterly_eps, eps_growth_flags
+
 
 from upward import (
     detect_smc_accumulation_breakout,
@@ -29,10 +35,6 @@ TECH_BUY_FALLBACK = 0.60
 
 # --- model_loader.py (or top of buy.py) ---
 from pathlib import Path
-import os, joblib
-
-from pathlib import Path
-import joblib, json
 
 HERE = Path(__file__).resolve().parent
 
@@ -252,19 +254,45 @@ def _tech_fallback_score(snap: dict, df: pd.DataFrame, smc_breakout: bool, mean_
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run buy analysis with optional CSV output")
-    parser.add_argument("--csv", dest="csv", action="store_true", help="Save predictions to CSV")
-    parser.add_argument("--no-csv", dest="csv", action="store_false", help="Do not save predictions to CSV")
-    parser.set_defaults(csv=True)
-    return parser.parse_args()
+    p = argparse.ArgumentParser()
+    p.add_argument("--csv", action="store_true", help="Save predictions_summary.csv")
+    p.add_argument("--no-cache", action="store_true", help="Bypass cache entirely")
+    p.add_argument("--refresh-cache", choices=["none", "force"], default="none",
+                   help="Cache policy: 'force' to re-fetch all symbols")
+    p.add_argument("--cache-ttl-mins", type=int, default=360,
+                   help="Refresh data if cache older than this many minutes")
+    p.add_argument("--allow-stale", action="store_true",
+                   help="Allow cache that doesn’t include today’s data")
+    return p.parse_args()
+
+
+def load_symbol_df(sym, args):
+    if args.no_cache:
+        # Force RTH=False path to be similar to a refresh with maximum data
+        df = fetch_data_cached(sym, ttl_minutes=0, force_refresh=True, require_today=not args.allow_stale)
+    elif args.refresh_cache == "force":
+        df = fetch_data_cached(sym, ttl_minutes=args.cache_ttl_mins, force_refresh=True, require_today=not args.allow_stale)
+    else:
+        df = fetch_data_cached(sym, ttl_minutes=args.cache_ttl_mins, force_refresh=False, require_today=not args.allow_stale)
+    return df
 
 
 def main():
     summary = []
     args = parse_args()
 
+    rows = []
     # First pass: analyze and collect base fields
     for symbol in symbols:
+        df_raw = load_symbol_df(symbol, args)
+        if df_raw is None or df_raw.empty:
+            print(f"⚠️ {symbol}: no data (fetch/cache failure)")
+            continue
+
+        df = compute_indicators(df_raw.copy(), symbol=symbol)
+        if df.empty:
+            print(f"⚠️ {symbol}: indicators failed/empty")
+            continue
         result = analyze_symbol_all(symbol)
         if result:
             ce = {k: result.get(k) for k in
@@ -288,8 +316,18 @@ def main():
     for res in summary:
         symbol = res["Symbol"]
         try:
-            df = fetch_data_cached(symbol, duration='3 Y', bar_size='1 day', refresh=True)
+            df = fetch_data_cached(symbol, bar_spec='10 Y', bar_size='1 day', force_refresh=True)
             df = compute_indicators(df, symbol=symbol)
+
+            # ==========================
+            #   EPS (Quarterly) Features
+            # ==========================
+            eps_df = fetch_quarterly_eps(symbol)
+            eps_flags = eps_growth_flags(eps_df)
+
+            res["EPS Increase 2Q"] = eps_flags["EPS Increase 2Q"]
+            res["EPS Increase 3Q"] = eps_flags["EPS Increase 3Q"]
+            res["EPS Increase 4Q"] = eps_flags["EPS Increase 4Q"]
 
             # Pattern/price-action signals
             df = compute_upward_trend(df)
@@ -306,6 +344,11 @@ def main():
             res["Bullish_Engulfing"] = detect_bullish_engulfing(df)
             res["Hammer"] = detect_hammer(df)
             res["Trend_Strength"] = int(df.iloc[-1].get("trend_strength", 0))
+
+            # 1) Volatility / macro regime fields
+            res["Sym Vol Regime"] = int(df.iloc[-1].get("sym_vol_regime", 0))
+            res["VIX Vol Regime"] = int(df.iloc[-1].get("VIX_vol_regime", 0))
+            res["Volume Pressure"] = float(df.iloc[-1].get("volume_pressure", 0.0))
 
             # Technical snapshot (readable for the table)
             snap = _compute_indicator_snap(df)
@@ -332,6 +375,13 @@ def main():
             res["Model Probability"] = round(prob, 2)
             res["Model-Driven Buy"] = "✅" if prob >= STRONG_BUY_THRESH else "❌"
             res["Confidence Band"] = get_confidence_band(prob)
+
+            from exit_signals import compute_exit_signals
+            exit_info = compute_exit_signals(df, entry_price=res["Refined Buy Price"])
+            res["Exit Now"] = exit_info["ExitNow"]
+            res["Atr Trailing Stop"] = exit_info["AtrTrailingStop"]
+            res["Exit Reasons"] = exit_info["ExitReasons"]
+
 
             # Fallback technical BUY when model is low
             if prob < BUY_THRESH:
@@ -370,6 +420,20 @@ def main():
         if col not in df_summary.columns:
             df_summary[col] = np.nan
 
+    # ✅ NEW: aggregate price reversal signals into a single flag
+    rev_cols = ["Mean_Reversion", "Bullish_Engulfing", "Hammer"]
+    for c in rev_cols:
+        if c not in df_summary.columns:
+            df_summary[c] = False  # or np.nan, as you prefer
+
+    has_reversal = (
+        df_summary[rev_cols]
+        .fillna(False)
+        .astype(bool)
+        .any(axis=1)
+    )
+    df_summary["Price Reversal"] = np.where(has_reversal, "✅", "❌")
+
     df_summary["90D Hit"] = hit_list
     df_summary["90D Gain (%)"] = gain_list
     df_summary["Days to Peak"] = days_list
@@ -389,8 +453,12 @@ def main():
         "EMA Uptrend", "EMA21 Slope", "ADX Strength", "MACD Cross", "RSI", "RSI State",
         "OBV Trend", "At BB Lower",
         "Volume Surge", "Near Support", "Signal Score",
+        "Price Reversal",
         "SMC_Breakout", "Mean_Reversion", "Bullish_Engulfing", "Hammer", "Trend_Strength",
-        "Market Stage",
+        "Market Stage",    "Sym Vol Regime", "VIX Vol Regime", "Volume Pressure",
+        "Exit Now", "Atr Trailing Stop", "Exit Reasons",
+        "EPS Increase 2Q", "EPS Increase 3Q", "EPS Increase 4Q",
+
     ]
 
     # Fill optional columns if missing
@@ -405,12 +473,81 @@ def main():
 
     print(df_summary[safe_cols].to_string(index=False))
 
+    # === NEW: always save an Excel next to buy.py ===
+
+    HERE = Path(__file__).resolve().parent
+    xlsx_path = HERE / "predictions_summary.xlsx"  # change name if you like
+    _ = dump_to_excel(df_summary[safe_cols], str(xlsx_path))
+    print(f"\n📊 Excel saved → {xlsx_path}")
+
     if args.csv:
         df_summary[safe_cols].to_csv("predictions_summary.csv", index=False, encoding="utf-8-sig")
         print("\n✅ Predictions saved to predictions_summary.csv")
     else:
         print("\n💡 Skipped saving CSV as per user request")
     # df_summary[safe_cols].to_csv("predictions_summary.csv", index=False, encoding="utf-8-sig")
+
+
+
+def dump_to_excel(df: pd.DataFrame, filename: str = "results.xlsx") -> str:
+    """
+    Save the summary dataframe to a nicely formatted Excel workbook.
+    - Autosizes columns
+    - Freezes header row
+    - Adds data bars to score columns
+    """
+    # Ensure directory exists
+    out_dir = os.path.dirname(filename)
+    if out_dir and not os.path.exists(out_dir):
+        os.makedirs(out_dir, exist_ok=True)
+
+    with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
+        # --- Main sheet
+        sheet = "Summary"
+        df.to_excel(writer, sheet_name=sheet, index=False)
+
+        wb  = writer.book
+        ws  = writer.sheets[sheet]
+
+        # Freeze header row
+        ws.freeze_panes(1, 1)
+
+        # Autosize columns
+        for i, col in enumerate(df.columns):
+            # compute a reasonable width from string lengths
+            try:
+                maxlen = max(
+                    len(str(col)),
+                    int(df[col].astype(str).str.len().quantile(0.95)) + 2
+                )
+            except Exception:
+                maxlen = len(str(col)) + 2
+            maxlen = max(8, min(maxlen, 48))  # clamp between 8 and 48
+            ws.set_column(i, i, maxlen)
+
+        # Light number format for numerics
+        numfmt = wb.add_format({'num_format': '0.00'})
+
+        # Apply number formats to numeric columns
+        for i, col in enumerate(df.columns):
+            if pd.api.types.is_numeric_dtype(df[col]):
+                ws.set_column(i, i, None, numfmt)
+
+        # Quick visuals on “score” columns (if present)
+        score_cols = [
+            "Model Probability", "Confidence Score", "Institutional Score",
+            "Signal Score", "ADX", "Volume Weight", "Darvas Breakout %", "10D Gain (%)"
+        ]
+        for col in score_cols:
+            if col in df.columns:
+                j = df.columns.get_loc(col)
+                # data bar from row 2 to last row
+                ws.conditional_format(1, j, len(df), j, {'type': 'data_bar'})
+
+    return os.path.abspath(filename)
+
+
+
 
 
 if __name__ == "__main__":

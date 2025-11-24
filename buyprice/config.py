@@ -25,12 +25,21 @@ UPWARD_SIGNAL_WEIGHTS = {
     "min_signals": 2,
 }
 
+# === Macro symbols used for feature engineering ===
+# NOTE: Adjust tickers to your actual IBKR symbols if needed.
+MACRO_SYMBOLS = {
+    "VIX": "VIX",          # Volatility Index (or your VIX ticker)
+    "RATE_10Y": "TNX",     # 10Y yield proxy (or ZN/ZN futures equivalent)
+    "QQQ": "QQQ",          # Nasdaq-100 ETF
+}
+
+
 symbols = [
     # Individual Stocks
     "AAL", "AAPL", "ACIW", "ACN", "ACHR", "ADBE", "AGX", "AI", "ALNT", "AMD",
     "AMBA", "AMGN", "AMPL", "AMZN", "APLD", "APP", "ARM", "ARKQ", "ASA", "ASGN",
     "ASTS", "ATAT", "AVAV", "AVGO", "BA", "BAH", "BABA", "BBW", "BBAI", "BIDU",
-    "BILI", "BITB", "BITO", "BITQ", "BITW", "BK", "BKSY", "BMBL", "BOTZ", "BTBT",
+    "BILI", "BITB", "BITO", "BITW", "BK", "BKSY", "BMBL", "BOTZ", "BTBT",
     "BTDR", "BUG", "BZ", "CFLT", "CCJ", "CCS", "CEG", "CELH", "CHH", "CHKP", "CIBR",
     "CIFR", "CLSK",  "CNC", "COIN", "COMP", "CORZ", "CPA", "CPAY", "CPER",
     "CPNG", "CRPT", "CRM", "CRWD", "CVCO", "CVV", "CYBR", "CW", "DASH", "DCBO",

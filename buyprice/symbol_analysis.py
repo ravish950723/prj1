@@ -10,6 +10,8 @@ from compute import analyze_symbol_all
 from xgboost import XGBClassifier
 import joblib
 import os
+from exit_signals import compute_exit_signals
+
 
 
 # Load pre-trained model if available (can be trained separately)
@@ -80,6 +82,17 @@ def compute_final_recommendation(row, model):
             recommendation = 'STRONG BUY'
         elif model_proba >= 0.6:
             recommendation = 'BUY'
+        # if model_proba >= 0.85:
+        #     recommendation = 'ULTRA HIGH'
+        # elif model_proba >= 0.70:
+        #     recommendation = 'HIGH'
+        # elif model_proba >= 0.55:
+        #     recommendation = 'MEDIUM'
+        # elif model_proba >= 0.40:
+        #     recommendation = 'LOW'
+        # else:
+        #     recommendation = 'VERY LOW'
+
 
         return recommendation, round(model_proba, 2), round(confidence_score, 2)
 
@@ -122,7 +135,7 @@ def is_strong_buy_v2(recommendation, trend_htf, trend_itf, trend_ltf, confidence
 
 def analyze_symbol(symbol: str):
     try:
-        df = fetch_data_cached(symbol, '3 Y', '1 day')
+        df = fetch_data_cached(symbol, '10 Y', '1 day')
         print(f"[{symbol}] Columns before indicators: {df.columns.tolist()}")
         df = compute_indicators(df, symbol=symbol)
         print(f"[{symbol}] Columns after indicators: {df.columns.tolist()}")
@@ -187,7 +200,7 @@ def analyze_symbol(symbol: str):
 
         if etf_symbol and etf_symbol != symbol:
             try:
-                df_etf = fetch_data_cached(etf_symbol, '3 Y', '1 day')
+                df_etf = fetch_data_cached(etf_symbol, '10 Y', '1 day')
                 df_etf = compute_indicators(df_etf, symbol=etf_symbol)
 
                 s = df[['date', 'close']].rename(columns={'close': 'close_sym'})
@@ -270,7 +283,13 @@ def analyze_symbol(symbol: str):
         if _valid_entries:
             buy_price = round((buy_price + float(np.nanmean(_valid_entries))) / 2.0, 2)
 
-        return {
+
+        # --- SELL / EXIT suggestions from latest bar ---
+        exit_info = compute_exit_signals(df, entry_price=buy_price, atr_mult=2.0)
+
+
+
+        result =  {
             "Market Stage": str(df.get('market_stage', pd.Series(['Neutral/Transition'])).iloc[-1]) if 'market_stage' in df.columns else 'Neutral/Transition',
             "Symbol": symbol,
             "Refined Buy Price": buy_price,
@@ -314,6 +333,14 @@ def analyze_symbol(symbol: str):
 
         }
 
+        # extend with exit info
+        result.update({
+            "ATR Trailing Stop": exit_info["AtrTrailingStop"],
+            "Exit Now": exit_info["ExitNow"],
+            "Exit Reasons": exit_info["ExitReasons"],
+        })
+
+        return result
     except Exception as e:
         print(f"⚠️ Error analyzing {symbol}: {e}")
         return None
