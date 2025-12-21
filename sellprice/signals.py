@@ -419,41 +419,64 @@ except Exception:
 def _ema(series: pd.Series, span: int) -> pd.Series:
     return series.ewm(span=span, adjust=False, min_periods=span).mean()
 
-def check_weekly_trend(symbol: str) -> bool:
+
+def check_weekly_trend(symbol: str, weekly_df: pd.DataFrame | None = None) -> bool:
     """
-    Heuristic weekly trend detector:
-    - Pull daily data (3Y) if available
-    - Resample to W-FRI close
-    - Compute 10W/30W EMA (approx via weekly closes)
-    - Uptrend if close > ema30 and ema10 > ema30 (with 2-week confirmation)
-    Returns True (Bullish) or False (Bearish/Neutral).
+    Determines if the weekly trend is bullish.
+    Backward compatible: sell.py calls check_weekly_trend(symbol) with one arg.
+    Fails OPEN (returns True) if data is missing to avoid false sell signals.
     """
     try:
-        if _fetch_hist is None:
-            return True  # fail-open to avoid breaking pipeline
-        df = _fetch_hist(symbol, duration="3 Y", bar_size="1 day")
-        if df is None or df.empty:
+        # If weekly_df is not provided, try fetching daily data and resample to weekly.
+        if weekly_df is None:
+            if _fetch_hist is None:
+                return True  # fail-open
+
+            dfd = _fetch_hist(symbol)
+            if dfd is None or getattr(dfd, "empty", True):
+                return True
+
+            # Ensure datetime index
+            if not isinstance(dfd.index, pd.DatetimeIndex):
+                if "date" in dfd.columns:
+                    dfd = dfd.copy()
+                    dfd["date"] = pd.to_datetime(dfd["date"])
+                    dfd = dfd.set_index("date")
+                else:
+                    dfd.index = pd.to_datetime(dfd.index)
+
+            dfd = dfd.sort_index()
+            dfd = dfd.rename(columns={c: c.lower() for c in dfd.columns})
+
+            if not {"close"} <= set(dfd.columns):
+                return True
+
+            # Build weekly close series (W-FRI)
+            wk = pd.DataFrame({"close": dfd["close"].resample("W-FRI").last()}).dropna()
+            if wk.empty or len(wk) < 40:
+                return True
+
+            wk["ema21w"] = _ema(wk["close"], 21)
+            wk["ema30w"] = _ema(wk["close"], 30)
+            weekly_df = wk
+
+        if weekly_df is None or weekly_df.empty:
             return True
-        # Ensure datetime index
-        if not isinstance(df.index, pd.DatetimeIndex):
-            if "date" in df.columns:
-                df["date"] = pd.to_datetime(df["date"])
-                df = df.set_index("date")
-            else:
-                df.index = pd.to_datetime(df.index)
-        w = df.sort_index().resample("W-FRI").last()
-        w = w.dropna(subset=["close"])
-        w["ema10w"] = _ema(w["close"], span=10)
-        w["ema30w"] = _ema(w["close"], span=30)
-        if len(w) < 35:
+
+        w = weekly_df.iloc[-1]
+
+        required_cols = ["ema21w", "ema30w", "close"]
+        if not all(c in weekly_df.columns for c in required_cols):
             return True
-        c, e10, e30 = w["close"].iloc[-1], w["ema10w"].iloc[-1], w["ema30w"].iloc[-1]
-        c1, e10_1, e30_1 = w["close"].iloc[-2], w["ema10w"].iloc[-2], w["ema30w"].iloc[-2]
-        bullish = (c > e30 and e10 > e30) and (c1 > e30_1 and e10_1 > e30_1)
+
+        bullish = (w["close"] > w["ema21w"]) and (w["ema21w"] > w["ema30w"])
         return bool(bullish)
+
     except Exception as e:
-        print(f"[WARN] check_weekly_trend({symbol}) fallback due to error: {e}")
+        print(f"[WARN] Weekly trend check failed for {symbol}: {e}")
         return True
+
+
 
 def apply_trailing_stop(df: pd.DataFrame, atr_mult: float = 3.0) -> float:
     """

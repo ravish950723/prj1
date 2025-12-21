@@ -5,7 +5,7 @@ CACHE_DIR = os.getenv("CACHE_DIR", "cache")
 IB_HOST = os.getenv("IB_HOST", "127.0.0.1")
 IB_PORT = int(os.getenv("IB_PORT", "7497"))
 IB_CLIENT_ID = int(os.getenv("IB_CLIENT_ID", "103"))  # change via env if needed
-
+ALPHA_VANTAGE_API_KEY = "HEFB32P"
 # === Labels / thresholds ===
 STRONG_BUY_LABEL = {
     "forward_window": 30,
@@ -25,38 +25,78 @@ UPWARD_SIGNAL_WEIGHTS = {
     "min_signals": 2,
 }
 
+# === Macro symbols used for feature engineering ===
+# NOTE: Adjust tickers to your actual IBKR symbols if needed.
+MACRO_SYMBOLS = {
+    "VIX": "VIX",          # Volatility Index (or your VIX ticker)
+    "RATE_10Y": "TNX",     # 10Y yield proxy (or ZN/ZN futures equivalent)
+    "QQQ": "QQQ",          # Nasdaq-100 ETF
+}
+
+
 symbols = [
-    # Individual Stocks
-    "AAL", "AAPL", "ACIW", "ACN", "ACHR", "ADBE", "AGX", "AI", "ALNT", "AMD",
-    "AMBA", "AMGN", "AMPL", "AMZN", "APLD", "APP", "ARM", "ARKQ", "ASA", "ASGN",
-    "ASTS", "ATAT", "AVAV", "AVGO", "BA", "BAH", "BABA", "BBW", "BBAI", "BIDU",
-    "BILI", "BITB", "BITO", "BITW", "BK", "BKSY", "BMBL", "BOTZ", "BTBT",
-    "BTDR", "BUG", "BZ", "CFLT", "CCJ", "CCS", "CEG", "CELH", "CHH", "CHKP", "CIBR",
-    "CIFR", "CLSK",  "CNC", "COIN", "COMP", "CORZ", "CPA", "CPAY", "CPER",
-    "CPNG", "CRPT", "CRM", "CRWD", "CVCO", "CVV", "CYBR", "CW", "DASH", "DCBO",
-    "DFH", "DGII", "DMAT", "DOMO", "DXYZ", "DXPE", "EA", "EBAY", "ERJ", "ESLT",
-    "ESPO", "ESTC", "ETSY", "EXOD", "EXPE", "F", "FDIG", "FICO", "FI", "FIS",
-    "FLYW",  "FMC", "FOUR", "FRSH", "FTNT", "GAMR", "GBTC", "GBTG", "GDDY",
-    "GFI", "GLBE", "GLD", "GOOG", "GOOGL", "GRND", "GRPN", "GRRR", "GTI", "GWRE",
-    "HACK", "HAS", "HCAT", "HEI", "HERO", "HII", "HLIT", "HOOD", "HOV", "HOUS",
-    "HRTG", "HIVE", "HUBS", "HUT", "IBIT", "IBM", "INDS", "INFY", "INOD", "INTC",
-    "IONQ", "IREN", "IRDM", "III", "JNJ", "JOBY", "JOYY", "JBLU", "KBR", "KGC",
-    "KOPN", "KTOS", "LDOS", "LEU", "LEVI", "LGIH", "LHX", "LMT", "LTBR",
-    "LSPD", "LUNR", "M", "MAMA", "MARA", "MDB", "META", "MISL", "MP", "MRVL",
-    "MRCY", "MSFT", "MU", "NDAQ", "NBIS", "NCNO", "NEM", "NERD", "NET", "NEE",
-    "NFLX", "NLR",  "NU", "NUKZ", "OBDC", "OKLO",
-    "OPEN", "ORCL", "OTEX", "OUST", "PBYI", "PANW", "PAR", "PATH", "PPA", "PSTG",
-    "PLUS", "PL", "PLTK", "PLTR", "PRGS", "PSN", "PXH", "QBTS", "QNTM", "QTUM",
-    "QTWO", "QUBT", "QS", "QURE", "RDVT", "RBLX", "RBRK", "REPX", "RIOT", "RKLB",
-    "RGTI", "ROBO", "ROKU", "RPAY", "RPD", "RR", "RVMD", "RUM", "RZLV", "S",
-    "SABR", "SATL", "SATS", "SE", "SERV", "SETM", "SHLD", "SHOP", "SIRI", "SLV",
-    "SMCI", "SMR", "SMLR", "SNCY", "SNAP", "SNOW", "SOFI", "SOUN", "SPNS", "SPOT",
-    "SPRX", "SPT", "SPIR", "SPRX", "SPOT", "SPRX", "SPRX", "SPRX", "STCE",
-    "STNE", "STRL", "SYM", "TDOC", "TDC", "TDY", "TEM", "TENB", "TER", "THNQ",
-    "TMC", "TME", "TNDM", "TNL",  "TRU", "TSAT", "TSLA", "TSM", "TTMI",
-    "TTWO", "UAL", "U", "ULCC", "UNH", "URA", "URNM", "USD", "USAR", "VAC",
-    "VEEV", "VIPS", "VRNS", "VRSK", "VRT", "VST", "VTEX", "WB", "WGMI", "WBTN",
-    "WULF", "XNET", "XOVR", "XPER", "XYF", "ZTEK", "ZS"
+    "AAL","AAPL","ABT","ACAD","ACEL","ACIW","ACN","ACHR","ADBE","ADMA","ADP",
+    "ADSK","ADT","AFRM","AGX","AI","AIZ","ALAB","ALGN","ALGT","ALK","ALKS",
+    "ALNT","ALRM","AME","AMAT","AMBA","AMGN","AMPL","AMTM","AMZN","ANIK",
+    "ANIP","AORT","APP","APPN","APLD","APTV","ARGT","ARKK","ARKQ","ARKX",
+    "ARM","ARQQ","ASA","ASGN","ASHR","ASTE","ASTS","ATAT","ATEN","ATLC",
+    "AUPH","AVAH","AVAV","AVGO","AVNS","AXP","BA","BAH","BABA","BB","BBAI",
+    "BBW","BBY","BCO","BDC","BIDU","BILI","BITB","BITO","BITQ","BITW","BK",
+    "BKNG","BKSY","BL","BLX","BMBL","BMY","BOTZ","BPOP","BR","BSWGF","BTBT",
+    "BTDR","BTMD","BUG","BWXT","BY","BYD","BZ","BZH","C","CACI","CASH","CASS",
+    "CBL","CBOE","CCBG","CCJ","CCK","CCS","CCSI","CDNS","CEG","CELH","CEVA",
+    "CF","CFLT","CGNX","CHH","CHKP","CI","CIBR","CIFR","CL","CLSK","CMCSA",
+    "CMRE","CNC","CNXN","COIN","COLL","COMP","CONI","COR","CORZ","CPA","CPAY",
+    "CPER","CPNG","CQQQ","CRDO","CRC","CRNC","CRPT","CRM","CRS","CRSR","CRUS",
+    "CRVL","CRWD","CSCO","CSGS","CSV","CTEV","CTLP","CTVA","CVCO","CVLT",
+    "CVS","CVV","CW","CXM","DAL","DAPP","DASH","DCBO","DCI","DDD","DD","DELL",
+    "DES","DFH","DGII","DHI","DIS","DJT","DLR","DLX","DMAT","DOMO","DRI","DRS",
+    "DUK","DVAX","DXCM","DXYZ","EA","EBAY","EBF","ECL","EDU","EEM","EH","EHAB",
+    "ELMD","EMR","ENS","ENTA","EQIX","ESCA","ESLT","ESPO","ESTC","ETD",
+    "ETSY","EVGO","EVTC","EXLS","EXOD","EXPE","EXPI","F","FBP","FDIG","FET",
+    "FFIV","FG","FIS","FLXS","FLYW","FMC","FOUR","FRSH","FSLR",
+    "FTDR","FTNT","FTXL","FUNC","FUBO","GAMR","GBTC","GBTG","GCBC","GD","GDDY",
+    "GDX","GDXJ","GE","GEN","GENC","GFF","GFI","GHC","GILD","GLBE","GLD","GM",
+    "GOOG","GOOGL","GOTU","GPN","GRAB","GRBK","GRC","GRMN","GRND","GRPN","GRRR",
+    "GS","GSAT","GSK","GTX","GWRE","GXO","H","HACK","HAL","HAS","HCAT",
+    "HD","HEI","HERO","HGV","HIG","HII","HIMX","HIVE","HLIT","HLT","HON",
+    "HOOD","HOUS","HOV","HPE","HPQ","HRB","HRMY","HRTG","HSTM","HUBS",
+    "HUYA","HUT","HWBK","IAS","IBM","IBEX","IBIT","ICE","IDT","IJT","III",
+    "IMMR","INDA","INDS","INFY","INNV","INOD","INSE","INTC","INTU",
+    "IONQ","IPO","IPGP","IQ","IREN","IRDM","IRMD","IRTC","ISRG","IT","IYR",
+    "JAKK","JAMF","JBI","JBL","JBLU","JD","JMIA","JNJ","JOBY","JOYY","KAR",
+    "KBH","KBR","KC","KD","KELYA","KGC","KMT","KOPN","KR","KRNT","KTOS",
+    "KWEB","LAUR","LDOS","LECO","LEN","LEU","LEVI","LGIH","LGND","LHX","LI",
+    "LIND","LITE","LIVN","LKQ","LMAT","LOGI","LOPE","LRN","LMT","LSPD","LTBR",
+    "LUNR","LUV","LVS","M","MA","MAMA","MANH","MARA","MASI","MAT","MAX","MDB",
+    "MD","MDT","MELI","META","MFIN","MGEE","MISL","MLI","MNDY","MO",
+    "MOMO","MOV","MP","MPAA","MRCY","MRVL","MS","MSFT","MSI","MSTR","MU",
+    "MYE","NAIL","NATH","NATR","NBIS","NCNO","NDAQ","NDSN","NEE","NEM","NET",
+    "NFLX","NFG","NGVT","NHC","NICE","NIO","NKE","NLR","NNI","NNOX","NOC",
+    "NOVT","NSANY","NTAP","NTCT","NTES","NTNX","NU","NUKZ","NVDA","NVGS",
+    "NXST","OBDC","OC","OFG","OIS","OKLO","OKTA","OMCL","OPEN","ORCL",
+    "ORGO","OSBC","OSPN","OTEX","OUST","OVLY","OVV","PAG","PANW","PAR","PATH",
+    "PAY","PAYO","PBYI","PCG","PDD","PEB","PEBK","PEGA","PFE","PHM","PICK",
+    "PINS","PL","PLTK","PLTR","PLUS","PLUG","PLXS","PRDO","PRGS","PRLB",
+    "PRVA","PSN","PSTG","PTCT","PXH","PYPL","QBTS","QCOM","QNCCF","QNTM",
+    "QS","QTUM","QTWO","QUBT","QLYS","RAMP","RBLX","RBRK","RBCAA","RBKB",
+    "RCL","RDNT","RDVT","RDW","REMX","REPX","RGTI","RIGL","RIOT","RKLB",
+    "ROBO","ROKU","RPAY","RPD","RR","RRBI","RUM","RVMD","RXT","RZLV","RZV",
+    "S","SABR","SAIC","SAMG","SATL","SATS","SCHD","SCHH","SCHA","SCSC",
+    "SDHC","SE","SERV","SETM","SFST","SGC","SH","SHLD","SHOP","SIRI","SIGA",
+    "SIGI","SLV","SLYG","SMCI","SMLR","SMR","SNAP","SNOW","SNA","SNCY",
+    "SOFI","SOHU","SONY","SOUN","SPFI","SPIR","SPOT","SPT","SSNC",
+    "SSO","STCE","STNE","STRT","STT","SUPN","SWX","SXC","SYF","SYK","SYM",
+    "SYNA","T","TAL","TALO","TBCH","TBPH","TCMD","TDC","TDOC","TDY","TECL",
+    "TEM","TENB","TER","THFF","THNQ","TIGO","TK","TMHC","TME","TMUS","TNC",
+    "TNDM","TNK","TOL","TPH","TRI","TRIP","TRU","TSAT","TSBK","TSLA","TSM",
+    "TTMI","TTWO","UAL","U","ULCC","UNH","UNTY","URA","URNM","USAR","USCB",
+    "USD","UTHR","UTMD","UVE","V","VAC","VALU","VB","VBK","VEA","VEEV",
+    "VICI","VIPS","VKTX","VLRS","VNDA","VNT","VRSK","VRNS","VRT","VST",
+    "VTEX","VTWO","VZ","WAB","WAY","WB","WCC","WDAY","WEYS","WGMI","WIT",
+    "WIX","WK","WRLD","WSBF","WTS","WULF","XME","XMTR","XNET","XOVR",
+    "XPER","XPRO","XRAY","XYF","YALA","Z","ZBRA","ZEPP","ZH","ZM","ZS",
+    "ZTEK"
 ]
 
 
@@ -126,13 +166,7 @@ symbol_to_sector = {'AMBA': 'Semiconductor', 'ARQQ': 'Tech', 'ASTS': 'Satellite'
                     'DMAT': 'GrapheneETF', 'SETM': 'GrapheneETF', 'GDX': 'MetalETF', 'GDXJ': 'MetalETF',
                     'PICK': 'MetalETF', 'XME': 'MetalETF', 'URA': 'MetalETF', 'DBB': 'MetalETF',
                     'REMX': 'MetalETF', 'LTBR': 'Nuclear', 'BWXT': 'Nuclear', 'LEU': 'Nuclear', 'CCJ': 'Nuclear',
-                    'CEG': 'Nuclear', 'VST': 'Nuclear', 'NLR': 'NuclearETF',
-                    'URNM': 'NuclearETF', 'NAIL': 'HomebuildersBull', 'USD': 'SemiconductorsBull',
-                    'TECL': 'TechnologyBull', 'TQQQ': 'TechnologyBull', 'SSO': 'SP500Bull',
-                    'SOXL': 'SemiconductorsBull', 'NVDL': 'SingleStock_NVDA_Bull', 'NVDU': 'SingleStock_NVDA_Bull',
-                    'CONL': 'SingleStock_COIN_Bull', 'SH': 'SP500Bear', 'QID': 'NasdaqBear',
-                    'CONI': 'SingleStock_COIN_Bear', 'MSTU': 'SingleStock_MSFT_Bull', 'FIAT': 'MacroCurrency',
-                    'IONX': 'SingleStock_IONQ_Bull'
+                    'CEG': 'Nuclear', 'VST': 'Nuclear', 'NLR': 'NuclearETF'
                     }
 
 sector_etfs = {'Tech': 'XLK', 'AI': 'DXYZ', 'Quantum': 'QTUM', 'CryptoMining': 'WGMI', 'CryptoETF': 'BITQ',

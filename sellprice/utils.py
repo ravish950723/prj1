@@ -4,38 +4,29 @@ from data_fetcher import fetch_historical_data
 from config import symbols, symbol_to_sector, sector_map
 import csv
 from pathlib import Path
+import pandas as pd
 
 # Global signal log file
 log_file = "trades_log.csv"
-
-def _ensure_log_header(path, new_fieldnames):
-    """
-    If the existing CSV header is missing columns, rewrite the file with the new header
-    and preserve existing rows (filling missing columns with blanks).
-    """
-    import csv, os, io
-    if not os.path.exists(path):
-        return
-    with open(path, "r", encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f)
-        old_fieldnames = reader.fieldnames or []
-        if not set(new_fieldnames).issuperset(set(old_fieldnames)):
-            # Don't remove any old columns
-            return
-        # If headers already match exactly (order can differ), do nothing
-        if set(old_fieldnames) == set(new_fieldnames):
-            return
-        rows = list(reader)
-
-    # Rewrite with new header and updated rows
-    with open(path, "w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=new_fieldnames)
-        writer.writeheader()
-        for r in rows:
-            for k in new_fieldnames:
-                r.setdefault(k, None)
-            writer.writerow(r)
 signal_storage = []  # In-memory storage to avoid duplicates in runtime
+
+def _ensure_log_header(csv_path: str, fieldnames: list):
+    file = Path(csv_path)
+    if not file.exists():
+        with open(csv_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+    else:
+        with open(csv_path, "r", newline="") as f:
+            reader = csv.reader(f)
+            existing = next(reader, [])
+        missing = [f for f in fieldnames if f not in existing]
+        if missing:
+            with open(csv_path, "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(missing)
+
+
 
 
 def get_sector_info(symbol):
@@ -67,7 +58,7 @@ def get_sector_info(symbol):
         contract = Stock(symbol, 'SMART', 'USD')
         ib.qualifyContracts(contract)
         from indicators import calculate_indicators
-        df = fetch_historical_data(symbol, bar_size='1 day', duration='3 Y')
+        df = fetch_historical_data(symbol, bar_size='1 day', duration='10 Y')
         df = calculate_indicators(df)
         atr = df['atr'].iloc[-1]
         close = float(df['close'].iloc[-1])

@@ -92,7 +92,7 @@ def _merge_and_cache(symbol: str, timeframe: str, cached_df: pd.DataFrame, new_d
 
 def fetch_historical_data(
     symbol: str,
-    duration: str = "3 Y",
+    duration: str = "10 Y",
     bar_size: str = "1 day",
     what_to_show: str = "TRADES",
     use_rth: bool = True,
@@ -219,40 +219,6 @@ def _empty_frame(symbol: str) -> pd.DataFrame:
     ).assign(symbol=symbol)
 
 
-# def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
-#     """
-#     Ensure a consistent schema with 'date' datetime column (ascending),
-#     and standard OHLCV column names if present.
-#     """
-#     out = df.copy() if isinstance(df, pd.DataFrame) else pd.DataFrame(df)
-#
-#     # unify date-like column to 'date'
-#     rename = {}
-#     for c in ("date", "Date", "datetime", "time", "timestamp"):
-#         if c in out.columns:
-#             if c != "date":
-#                 rename[c] = "date"
-#             break
-#     if rename:
-#         out = out.rename(columns=rename)
-#     if "date" not in out.columns:
-#         out.insert(0, "date", pd.NaT)
-#
-#     # drop IB's barCount if present
-#     if "barCount" in out.columns:
-#         out = out.drop(columns=["barCount"])
-#
-#     # Ensure expected columns exist
-#     for col in ("open", "high", "low", "close", "volume"):
-#         if col not in out.columns:
-#             out[col] = pd.Series([None] * len(out), dtype="float64")
-#
-#     # Parse & sort
-#     out["date"] = pd.to_datetime(out["date"], errors="coerce")
-#     out = out.sort_values("date").reset_index(drop=True)
-#
-#     return out
-
 
 def _ensure_symbol_column(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
     out = df.copy()
@@ -260,77 +226,3 @@ def _ensure_symbol_column(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
     return out
 
 
-# def fetch_historical_data(
-#     symbol: str,
-#     duration: str = "1 Y",
-#     bar_size: str = "1 day",
-#     what_to_show: str = "TRADES",
-#     use_rth: bool = True,
-# ) -> pd.DataFrame:
-#     """
-#     Fetch OHLCV data for `symbol` at the specified bar size.
-#
-#     Steps:
-#       1) Read from cache (CACHE_DIR) via cache_utils if present.
-#       2) If cache missing/empty, fetch from IB.
-#       3) Normalize schema, attach `symbol`, cache successful fetch, and return.
-#
-#     Returns a DataFrame with columns at least:
-#       ['date','open','high','low','close','volume','symbol']
-#     May be empty, but columns will always exist (so callers won't KeyError).
-#     """
-#     timeframe = _tf_from_bar_size(bar_size)
-#
-#     # 1) Try cache
-#     try:
-#         cached = load_cache(symbol, timeframe)
-#     except Exception as e:
-#         print(f"[CACHE] Read error for {symbol} ({timeframe}): {e}")
-#         cached = None
-#
-#     if isinstance(cached, pd.DataFrame) and not cached.empty:
-#         cached = _normalize_df(cached)
-#         return _ensure_symbol_column(cached, symbol)
-#
-#     # 2) Fetch from IB
-#     ib = get_ib()
-#     contract = Stock(symbol, "SMART", "USD")
-#
-#     try:
-#         bars = ib.reqHistoricalData(
-#             contract,
-#             endDateTime="",
-#             durationStr=duration,
-#             barSizeSetting=bar_size,
-#             whatToShow=what_to_show,
-#             useRTH=1 if use_rth else 0,
-#             formatDate=1,
-#             keepUpToDate=False,
-#         )
-#     except Exception as e:
-#         # Typical: Error 200 "No security definition..." etc.
-#         print(f"[IB] Error for {symbol} ({timeframe}): {e}")
-#         return _empty_frame(symbol)
-#
-#     # Convert to DataFrame
-#     try:
-#         df = util.df(bars)
-#     except Exception as e:
-#         print(f"[IB] Failed to convert bars to DataFrame for {symbol}: {e}")
-#         return _empty_frame(symbol)
-#
-#     # Normalize schema & attach symbol
-#     df = _normalize_df(df)
-#     df = _ensure_symbol_column(df, symbol)
-#
-#     if df.empty:
-#         print(f"[IB] No data returned for {symbol} ({timeframe}).")
-#         return _empty_frame(symbol)
-#
-#     # 3) Save to cache (only when we have actual rows)
-#     try:
-#         save_cache(symbol, timeframe, df)
-#     except Exception as e:
-#         print(f"[CACHE] Save error for {symbol} ({timeframe}): {e}")
-#
-#     return df
