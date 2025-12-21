@@ -30,6 +30,8 @@ import pandas as pd
 # Project modules
 from fetching import fetch_data_cached
 from compute import compute_indicators
+from eps_features import fetch_quarterly_eps, eps_growth_flags, fetch_market_sentiment
+
 
 # Try to import symbol universe from config.py (be flexible on variable names)
 DEFAULT_SYMBOLS: List[str] = []
@@ -94,6 +96,40 @@ def build_training_rows(symbol: str, bar_spec: str, bar_size: str,
                 df["sym_vol_regime"].fillna(0) * 2 +
                 df["VIX_vol_regime"].fillna(0)
         )
+
+        # === Add Alpha Vantage fundamentals & sentiment ===
+        # 1) EPS growth flags (static per symbol, broadcast over all rows)
+        try:
+            eps_df = fetch_quarterly_eps(symbol)
+            eps_flags = eps_growth_flags(eps_df)
+        except Exception as _e:
+            if debug:
+                print(f"⚠️ {symbol}: EPS enrichment failed ({_e})")
+            eps_flags = {}
+
+        def _flag_to_float(v):
+            # True → 1.0, False → 0.0, None/missing → 0.0
+            if v is True:
+                return 1.0
+            if v is False:
+                return 0.0
+            return 0.0
+
+        df["eps_inc_2q"] = _flag_to_float(eps_flags.get("EPS Increase 2Q"))
+        df["eps_inc_3q"] = _flag_to_float(eps_flags.get("EPS Increase 3Q"))
+        df["eps_inc_4q"] = _flag_to_float(eps_flags.get("EPS Increase 4Q"))
+
+        # 2) Recent news sentiment features
+        try:
+            sent = fetch_market_sentiment(symbol)
+        except Exception as _e:
+            if debug:
+                print(f"⚠️ {symbol}: sentiment enrichment failed ({_e})")
+            sent = {}
+
+        df["news_sentiment_score"] = float(sent.get("news_sentiment_score") or 0.0)
+        df["news_positive_ratio"] = float(sent.get("news_positive_ratio") or 0.0)
+        df["news_article_count"] = float(sent.get("news_article_count") or 0.0)
 
         # Minimal required columns
         needed = ["date", "open", "high", "low", "close", "volume"]
