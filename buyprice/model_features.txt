@@ -61,8 +61,13 @@ QQQ_ma_200
 QQQ_trend_50_200
 QQQ_ret_20
 TLT_ret_20
-signal_score
 institutional_score
 volume_weight
 confidence_score
 regime_combo
+eps_inc_2q
+eps_inc_3q
+eps_inc_4q
+news_sentiment_score
+news_positive_ratio
+news_article_count

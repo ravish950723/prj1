@@ -196,20 +196,10 @@ def compute_indicators(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
             print(f"[compute] macro feature enrichment failed: {e}")
 
     # === Composite Signal Score ===
-    df["signal_score"] = (
-        df["EMA_uptrend"].astype(int) * 0.15
-        + df["MACD_crossover"].astype(int) * 0.15
-        + (df["strong_trend"] > 0).astype(int) * 0.15
-        + df["darvas_signal"].fillna(0).astype(int) * 0.10
-        + df["tight_range"].astype(int) * 0.10
-        + df["volume_surge"].astype(int) * 0.10
-        + df["near_support"].astype(int) * 0.05
-        + (df["green_candles"] / 3.0).clip(lower=0, upper=1) * 0.05
-        + df["above_EMA200"] * 0.05
-        + (df["MACD_hist_slope"] > 0).astype(int) * 0.05
-    ).fillna(0.0)
-
-    df["refined_buy_signal"] = df["signal_score"] >= 0.75
+        # NOTE: signal_score/refined_buy_signal rule block removed.
+    # Rule decisions are computed in symbol_analysis.py (upward/macro/ML stack).
+    # Keep a placeholder for backward-compatibility.
+    df["refined_buy_signal"] = False
 
     # === Confidence Metrics ===
     # score_institutional_investor expects/uses OBV/volume/close
@@ -223,15 +213,21 @@ def compute_indicators(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
     ).clip(0, 1)
 
     # === Recommendation Assignment ===
-    df["recommendation"] = np.where(df["refined_buy_signal"], "BUY", "HOLD")
-
+        # Backward-compat schema only; real recommendation computed later in symbol_analysis.
+    df["rule_recommendation"] = "HOLD"
     # === Trend Levels (string labels for downstream use) ===
     df["HTF_Trend"] = np.where((df["EMA_21"] > df["EMA_50"]), "UP", "DOWN")
     df["ITF_Trend"] = np.where(ta.ema(df["close"], length=8)  > ta.ema(df["close"], length=21), "UP", "DOWN")
     df["LTF_Trend"] = np.where(ta.ema(df["close"], length=5)  > ta.ema(df["close"], length=13), "UP", "DOWN")
 
-    # === FINAL: Market Stage ===
+   # === FINAL: Market Stage ===
     df["market_stage"] = _classify_market_stage(df)
+    try:
+        df["market_substage"] = _classify_market_substage(df, df["market_stage"])
+    except Exception as e:
+        if DEBUG:
+            print("[compute] market_substage classification failed:", e)
+        df["market_substage"] = "NEUTRAL_RANGE"
 
     if DEBUG:
         print("[compute] market_stage counts:", df["market_stage"].value_counts(dropna=False).to_dict())
@@ -263,12 +259,14 @@ def analyze_symbol_all(symbol: str):
             "Volume Weight": round(float(df["volume_weight"].iloc[-1]), 2),
             "Confidence Score": round(float(df["confidence_score"].iloc[-1]), 2),
             "Trend": str(df["HTF_Trend"].iloc[-1]),
-            "Recommendation": str(df["recommendation"].iloc[-1]),
+            "Rule Recommendation": str(df["rule_recommendation"].iloc[-1]),
             "Darvas Breakout %": round(float(df["darvas_breakout_pct"].iloc[-1]), 2)
             if "darvas_breakout_pct" in df.columns else 0.0,
             "Darvas Signal": "✅" if int(df.get("darvas_signal", pd.Series([0])).iloc[-1]) == 1 else "❌",
             "Refined Buy Price": round(buy_price, 2),
-            "Market Stage": str(df.get("market_stage", pd.Series(["Neutral/Transition"])).iloc[-1]),
+            "Market Stage": str(df.get("market_stage",   pd.Series(["Neutral/Transition"])).iloc[-1]),
+            "Market Sub-Stage": str(df.get("market_substage", pd.Series(["NEUTRAL_RANGE"])).iloc[-1]),
+
         }
 
         # Merge in candle entries
@@ -526,6 +524,17 @@ def candle_entry_from_weeks(df: pd.DataFrame, weeks: int = 6) -> float:
         # Light outlier removal
         candidates = _iqr_filter(candidates)
 
+        darvas_high = _safe_last(recent, "darvas_box_high", default=np.nan)
+        darvas_sig = int(_safe_last(recent, "darvas_signal", default=0))
+
+        if darvas_sig == 1 and np.isfinite(darvas_high):
+            # Retest buy: slightly above box high OR at vwap/ema21 if those are higher
+            retest_anchor = max(darvas_high * 1.002, min(ema21, vwap_sup))
+            # Use smaller buffer so you don’t miss the fill on a retest
+            entry = retest_anchor - 0.10 * atr if np.isfinite(atr) else retest_anchor * 0.995
+            entry = min(entry, last_close * 0.999)
+            return round(entry, 2)
+
         # Trend regime weighting
         strong_trend = (adx >= 25) and ema_up
         if strong_trend:
@@ -564,19 +573,7 @@ def candle_entry_from_weeks(df: pd.DataFrame, weeks: int = 6) -> float:
             return float("nan")
 
         base = float(np.average(vals, weights=wts))
-
-
-        vals, wts = [], []
-        def add(v, key):
-            if np.isfinite(v):
-                vals.append(float(v)); wts.append(weights[key])
-        add(ema21, "ema21"); add(vwap_sup, "vwap"); add(darvas_lo, "darv"); add(bb_lower, "bb"); add(swing_low, "swing")
-        if not vals:
-            return float("nan")
-
-        base = float(np.average(vals, weights=wts))
-
-        # 61.8% Fib cap (don’t chase)
+# 61.8% Fib cap (don’t chase)
         high_n = float(recent["high"].max()) if "high" in recent.columns else np.nan
         low_n  = float(recent["low"].min())  if "low"  in recent.columns else np.nan
         if np.isfinite(high_n) and np.isfinite(low_n) and high_n > low_n:
@@ -591,14 +588,16 @@ def candle_entry_from_weeks(df: pd.DataFrame, weeks: int = 6) -> float:
         # ATR buffer tuned by weeks; fallback to a tiny % if ATR NaN
         buf_k = _buffer_by_weeks(weeks)
         if np.isfinite(atr) and atr > 0:
-            entry = base - buf_k * atr
             # Volatility regime conditioning: deeper discount in high vol, shallower in low vol
             sym_reg = float(
-                recent.get("sym_vol_regime", pd.Series([0])).iloc[-1]) if "sym_vol_regime" in recent.columns else 0
+                recent.get("sym_vol_regime", pd.Series([0])).iloc[-1]
+            ) if "sym_vol_regime" in recent.columns else 0
             if sym_reg == 1:  # high vol
                 buf_k *= 1.2
             elif sym_reg == -1:  # low vol
                 buf_k *= 0.8
+
+            entry = base - buf_k * atr
         else:
             entry = base * 0.99  # ~1% cushion if ATR missing
 
@@ -646,3 +645,82 @@ def candle_entries_multi(df: pd.DataFrame, weeks_list=(2, 4, 6, 8, 12, 18, 30)):
     return out
 
 
+def _classify_market_substage(df: pd.DataFrame, stage: pd.Series) -> pd.Series:
+    """
+    Finer-grained market *sub-stage* labels using existing indicators.
+
+    High-level `market_stage` remains one of:
+      - Accumulation, Mark-Up, Distribution, Mark-Down, Neutral/Transition
+
+    This helper refines it into:
+      - ACCUMULATION_QUIET / ACCUMULATION_BREAKOUT
+      - MARKUP_UP / MARKUP_DOWN
+      - DISTRIBUTION_TOP / DISTRIBUTION_BREAKDOWN
+      - MARKDOWN_EARLY / MARKDOWN_TREND
+      - NEUTRAL_RANGE / NEUTRAL_CHOP
+    """
+    n = len(df)
+    sub = pd.Series(["NEUTRAL_RANGE"] * n, index=df.index, dtype="object")
+
+    def getcol(name, default, dtype=None):
+        s = df[name] if name in df.columns else pd.Series([default] * n, index=df.index)
+        if dtype == "bool":
+            return s.fillna(False).astype(bool)
+        if dtype == "float":
+            return pd.to_numeric(s, errors="coerce").fillna(float(default)).astype(float)
+        if dtype == "int":
+            return pd.to_numeric(s, errors="coerce").fillna(int(default)).astype(int)
+        if dtype == "str":
+            return s.fillna(str(default)).astype(str)
+        return s
+
+    st             = stage.fillna("Neutral/Transition").astype(str)
+    tight_range    = getcol("tight_range", False, "bool")
+    ema_up         = getcol("EMA_uptrend", False, "bool")
+    macd_hist      = getcol("MACD_hist", 0.0, "float")
+    macd_hist_slope= getcol("MACD_hist_slope", 0.0, "float")
+    adx            = getcol("ADX_14", 0.0, "float")
+    darvas_sig     = getcol("darvas_signal", 0, "int")
+    vol_trend      = getcol("volume_trend", 0.0, "float")
+
+    accum_mask    = st.eq("Accumulation")
+    markup_mask   = st.eq("Mark-Up")
+    dist_mask     = st.eq("Distribution")
+    markdown_mask = st.eq("Mark-Down")
+    neutral_mask  = st.eq("Neutral/Transition")
+
+    # Accumulation
+    quiet    = accum_mask & tight_range & (macd_hist <= 0) & (darvas_sig == 0)
+    breakout = accum_mask & ((macd_hist > 0) | (darvas_sig == 1))
+    sub[quiet]    = "ACCUMULATION_QUIET"
+    sub[breakout] = "ACCUMULATION_BREAKOUT"
+
+    # Mark-Up — your MARKUP_UP / MARKUP_DOWN
+    markup_up   = markup_mask & ema_up & (macd_hist > 0) & (macd_hist_slope >= 0)
+    markup_down = markup_mask & (~ema_up | (macd_hist <= 0) | (macd_hist_slope < 0))
+    sub[markup_up]   = "MARKUP_UP"
+    sub[markup_down] = "MARKUP_DOWN"
+
+    # Distribution
+    dist_top   = dist_mask & ema_up & (macd_hist >= 0)
+    dist_break = dist_mask & (~ema_up | (macd_hist < 0))
+    sub[dist_top]   = "DISTRIBUTION_TOP"
+    sub[dist_break] = "DISTRIBUTION_BREAKDOWN"
+
+    # Mark-Down
+    markdown_trend = markdown_mask & (adx >= 25) & (macd_hist < 0)
+    markdown_early = markdown_mask & ~markdown_trend
+    sub[markdown_early] = "MARKDOWN_EARLY"
+    sub[markdown_trend] = "MARKDOWN_TREND"
+
+    # Neutral / Transition
+    sub[neutral_mask & tight_range]  = "NEUTRAL_RANGE"
+    sub[neutral_mask & ~tight_range] = "NEUTRAL_CHOP"
+
+    if DEBUG:
+        try:
+            print("[substage] counts:", sub.value_counts(dropna=False).to_dict())
+        except Exception:
+            pass
+
+    return sub

@@ -15,12 +15,15 @@ STRONG_BUY_LABEL = {
     "min_volume_weight": 1.0,
 }
 
+
 UPWARD_SIGNAL_WEIGHTS = {
     "smc": 0.05,
-    "mean_rev": 0.03,
+    "mean_reversion": 0.03,
     "bullish_engulfing": 0.03,
     "hammer": 0.03,
     "trend_strength": 0.01,
+
+    # thresholds
     "buy_threshold": 0.08,
     "min_signals": 2,
 }
@@ -52,29 +55,29 @@ symbols = [
     "CVS","CVV","CW","CXM","DAL","DAPP","DASH","DCBO","DCI","DDD","DD","DELL",
     "DES","DFH","DGII","DHI","DIS","DJT","DLR","DLX","DMAT","DOMO","DRI","DRS",
     "DUK","DVAX","DXCM","DXYZ","EA","EBAY","EBF","ECL","EDU","EEM","EH","EHAB",
-    "ELMD","EMR","ENS","ENTA","EQIX","ERJ","ESCA","ESLT","ESPO","ESTC","ETD",
+    "ELMD","EMR","ENS","ENTA","EQIX","ESCA","ESLT","ESPO","ESTC","ETD",
     "ETSY","EVGO","EVTC","EXLS","EXOD","EXPE","EXPI","F","FBP","FDIG","FET",
-    "FFIV","FG","FI","FICO","FIS","FLXS","FLYW","FMC","FOUR","FRSH","FSLR",
+    "FFIV","FG","FIS","FLXS","FLYW","FMC","FOUR","FRSH","FSLR",
     "FTDR","FTNT","FTXL","FUNC","FUBO","GAMR","GBTC","GBTG","GCBC","GD","GDDY",
     "GDX","GDXJ","GE","GEN","GENC","GFF","GFI","GHC","GILD","GLBE","GLD","GM",
     "GOOG","GOOGL","GOTU","GPN","GRAB","GRBK","GRC","GRMN","GRND","GRPN","GRRR",
-    "GS","GSAT","GSK","GTI","GTX","GWRE","GXO","H","HACK","HAL","HAS","HCAT",
+    "GS","GSAT","GSK","GTX","GWRE","GXO","H","HACK","HAL","HAS","HCAT",
     "HD","HEI","HERO","HGV","HIG","HII","HIMX","HIVE","HLIT","HLT","HON",
-    "HOOD","HOUS","HOV","HPE","HPQ","HRB","HRMY","HRTG","HSII","HSTM","HUBS",
+    "HOOD","HOUS","HOV","HPE","HPQ","HRB","HRMY","HRTG","HSTM","HUBS",
     "HUYA","HUT","HWBK","IAS","IBM","IBEX","IBIT","ICE","IDT","IJT","III",
-    "IMMR","INDA","INDS","INFA","INFY","INNV","INOD","INSE","INTC","INTU",
+    "IMMR","INDA","INDS","INFY","INNV","INOD","INSE","INTC","INTU",
     "IONQ","IPO","IPGP","IQ","IREN","IRDM","IRMD","IRTC","ISRG","IT","IYR",
     "JAKK","JAMF","JBI","JBL","JBLU","JD","JMIA","JNJ","JOBY","JOYY","KAR",
     "KBH","KBR","KC","KD","KELYA","KGC","KMT","KOPN","KR","KRNT","KTOS",
     "KWEB","LAUR","LDOS","LECO","LEN","LEU","LEVI","LGIH","LGND","LHX","LI",
     "LIND","LITE","LIVN","LKQ","LMAT","LOGI","LOPE","LRN","LMT","LSPD","LTBR",
     "LUNR","LUV","LVS","M","MA","MAMA","MANH","MARA","MASI","MAT","MAX","MDB",
-    "MD","MDT","MELI","META","MFIN","MGEE","MISL","MLI","MLNK","MNDY","MO",
+    "MD","MDT","MELI","META","MFIN","MGEE","MISL","MLI","MNDY","MO",
     "MOMO","MOV","MP","MPAA","MRCY","MRVL","MS","MSFT","MSI","MSTR","MU",
     "MYE","NAIL","NATH","NATR","NBIS","NCNO","NDAQ","NDSN","NEE","NEM","NET",
     "NFLX","NFG","NGVT","NHC","NICE","NIO","NKE","NLR","NNI","NNOX","NOC",
     "NOVT","NSANY","NTAP","NTCT","NTES","NTNX","NU","NUKZ","NVDA","NVGS",
-    "NXST","OBDC","OC","ODP","OFG","OIS","OKLO","OKTA","OMCL","OPEN","ORCL",
+    "NXST","OBDC","OC","OFG","OIS","OKLO","OKTA","OMCL","OPEN","ORCL",
     "ORGO","OSBC","OSPN","OTEX","OUST","OVLY","OVV","PAG","PANW","PAR","PATH",
     "PAY","PAYO","PBYI","PCG","PDD","PEB","PEBK","PEGA","PFE","PHM","PICK",
     "PINS","PL","PLTK","PLTR","PLUS","PLUG","PLXS","PRDO","PRGS","PRLB",
@@ -85,7 +88,7 @@ symbols = [
     "S","SABR","SAIC","SAMG","SATL","SATS","SCHD","SCHH","SCHA","SCSC",
     "SDHC","SE","SERV","SETM","SFST","SGC","SH","SHLD","SHOP","SIRI","SIGA",
     "SIGI","SLV","SLYG","SMCI","SMLR","SMR","SNAP","SNOW","SNA","SNCY",
-    "SOFI","SOHU","SONY","SOUN","SPFI","SPIR","SPNS","SPOT","SPT","SSNC",
+    "SOFI","SOHU","SONY","SOUN","SPFI","SPIR","SPOT","SPT","SSNC",
     "SSO","STCE","STNE","STRT","STT","SUPN","SWX","SXC","SYF","SYK","SYM",
     "SYNA","T","TAL","TALO","TBCH","TBPH","TCMD","TDC","TDOC","TDY","TECL",
     "TEM","TENB","TER","THFF","THNQ","TIGO","TK","TMHC","TME","TMUS","TNC",
@@ -98,7 +101,6 @@ symbols = [
     "XPER","XPRO","XRAY","XYF","YALA","Z","ZBRA","ZEPP","ZH","ZM","ZS",
     "ZTEK"
 ]
-
 
 
 symbol_to_sector = {'AMBA': 'Semiconductor', 'ARQQ': 'Tech', 'ASTS': 'Satellite', 'BBAI': 'AI', 'BTBT': 'CryptoMining',
@@ -166,7 +168,7 @@ symbol_to_sector = {'AMBA': 'Semiconductor', 'ARQQ': 'Tech', 'ASTS': 'Satellite'
                     'DMAT': 'GrapheneETF', 'SETM': 'GrapheneETF', 'GDX': 'MetalETF', 'GDXJ': 'MetalETF',
                     'PICK': 'MetalETF', 'XME': 'MetalETF', 'URA': 'MetalETF', 'DBB': 'MetalETF',
                     'REMX': 'MetalETF', 'LTBR': 'Nuclear', 'BWXT': 'Nuclear', 'LEU': 'Nuclear', 'CCJ': 'Nuclear',
-                    'CEG': 'Nuclear', 'VST': 'Nuclear', 'NLR': 'NuclearETF',
+                    'CEG': 'Nuclear', 'VST': 'Nuclear', 'NLR': 'NuclearETF'
                     }
 
 sector_etfs = {'Tech': 'XLK', 'AI': 'DXYZ', 'Quantum': 'QTUM', 'CryptoMining': 'WGMI', 'CryptoETF': 'BITQ',
@@ -189,3 +191,24 @@ sector_map = {'Bitcoin': 'finance', 'BitcoinETF': 'etf', 'CryptoMining': 'financ
               'Nuclear': 'energy', 'AI': 'tech', 'TravelLeisure': 'consumer', 'Other': 'broad', 'Cybersecurity': 'tech'}
 
 symbol_to_industry = {}
+# --- VIX-adaptive signal tuning ---
+# These multipliers let you automatically get more conservative in high-volatility regimes
+# without retraining the ML model. Keys are matched by substring search on VIX_regime, e.g. "HIGH".
+VIX_ADAPTIVE_WEIGHTS = {
+    "LOW":    {"weight_mult": 1.00, "buy_threshold_mult": 1.00, "min_signals_add": 0},
+    "NORMAL": {"weight_mult": 1.00, "buy_threshold_mult": 1.00, "min_signals_add": 0},
+    "MEDIUM": {"weight_mult": 0.90, "buy_threshold_mult": 1.10, "min_signals_add": 0},
+    "HIGH":   {"weight_mult": 0.75, "buy_threshold_mult": 1.20, "min_signals_add": 1},
+}
+
+# Optional: weights used by symbol_analysis._calc_signal_score (kept separate from UPWARD_SIGNAL_WEIGHTS)
+RULE_SIGNAL_WEIGHTS = {
+    "vwap_support": 0.15,
+    "ema_uptrend": 0.15,
+    "macd_cross": 0.10,
+    "rsi_state": 0.10,
+    "near_support": 0.10,
+    "volume_surge": 0.10,
+    "darvas_signal": 0.20,
+    "smc_breakout": 0.10,
+}

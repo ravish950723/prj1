@@ -29,7 +29,7 @@ def darvas_box_signal(df, lookback=None):
     breakout_mask = (
         df['darvas_box_high'].notna()
         & (df['close'] > df['darvas_box_high'])
-        & (df['volume'] >= vol_avg20)   # bump to 1.2*vol_avg20 if you want stricter
+        & (df['volume'] >= 1.1 *vol_avg20)   # bump to 1.2*vol_avg20 if you want stricter
     )
     df['darvas_signal'] = breakout_mask.astype(int)
 
