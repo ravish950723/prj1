@@ -11,6 +11,64 @@ import pandas as pd
 import pandas_ta as ta
 
 
+# ================================
+# Scalar/boolean safety helpers
+# Avoid: "The truth value of a Series is ambiguous"
+# ================================
+def _as_scalar(x, default=None):
+    """Convert Series/array/scalar to a float scalar (last element for Series)."""
+    try:
+        import numpy as _np
+        if default is None:
+            default = _np.nan
+        import pandas as _pd
+        if isinstance(x, _pd.Series):
+            if x.empty:
+                return default
+            x = x.iloc[-1]
+        elif isinstance(x, _np.ndarray):
+            if x.size == 0:
+                return default
+            x = x.reshape(-1)[-1]
+        elif isinstance(x, (list, tuple)):
+            if len(x) == 0:
+                return default
+            x = x[-1]
+        if x is None:
+            return default
+        v = float(x)
+        if _np.isfinite(v):
+            return v
+        return default
+    except Exception:
+        return default
+
+def _as_bool(x, default=False):
+    """Convert Series/array/scalar to bool (last element for Series)."""
+    try:
+        import numpy as _np
+        import pandas as _pd
+        if isinstance(x, _pd.Series):
+            if x.empty:
+                return default
+            x = x.iloc[-1]
+        elif isinstance(x, _np.ndarray):
+            if x.size == 0:
+                return default
+            x = x.reshape(-1)[-1]
+        elif isinstance(x, (list, tuple)):
+            if len(x) == 0:
+                return default
+            x = x[-1]
+        if x is None:
+            return default
+        if isinstance(x, (float, _np.floating)) and _np.isnan(x):
+            return default
+        return bool(x)
+    except Exception:
+        return default
+
+
 
 DEBUG = False
 
@@ -196,10 +254,20 @@ def compute_indicators(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
             print(f"[compute] macro feature enrichment failed: {e}")
 
     # === Composite Signal Score ===
-        # NOTE: signal_score/refined_buy_signal rule block removed.
-    # Rule decisions are computed in symbol_analysis.py (upward/macro/ML stack).
-    # Keep a placeholder for backward-compatibility.
-    df["refined_buy_signal"] = False
+    df["signal_score"] = (
+        df["EMA_uptrend"].astype(int) * 0.15
+        + df["MACD_crossover"].astype(int) * 0.15
+        + (df["strong_trend"] > 0).astype(int) * 0.15
+        + df["darvas_signal"].fillna(0).astype(int) * 0.10
+        + df["tight_range"].astype(int) * 0.10
+        + df["volume_surge"].astype(int) * 0.10
+        + df["near_support"].astype(int) * 0.05
+        + (df["green_candles"] / 3.0).clip(lower=0, upper=1) * 0.05
+        + df["above_EMA200"] * 0.05
+        + (df["MACD_hist_slope"] > 0).astype(int) * 0.05
+    ).fillna(0.0)
+
+    df["refined_buy_signal"] = df["signal_score"] >= 0.75
 
     # === Confidence Metrics ===
     # score_institutional_investor expects/uses OBV/volume/close
@@ -213,8 +281,8 @@ def compute_indicators(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
     ).clip(0, 1)
 
     # === Recommendation Assignment ===
-        # Backward-compat schema only; real recommendation computed later in symbol_analysis.
-    df["rule_recommendation"] = "HOLD"
+    df["rule_recommendation"] = np.where(df["refined_buy_signal"], "BUY", "HOLD")
+
     # === Trend Levels (string labels for downstream use) ===
     df["HTF_Trend"] = np.where((df["EMA_21"] > df["EMA_50"]), "UP", "DOWN")
     df["ITF_Trend"] = np.where(ta.ema(df["close"], length=8)  > ta.ema(df["close"], length=21), "UP", "DOWN")
@@ -351,9 +419,13 @@ def _hammer_like_recent(df):
     if len(df) < 1:
         return False
     last = df.iloc[-1]
-    body = abs(last["close"] - last["open"])
-    lower_wick = (min(last["open"], last["close"]) - last["low"])
-    upper_wick = (last["high"] - max(last["open"], last["close"]))
+    c = _as_scalar(last.get("close", last.get("Close", np.nan)), default=np.nan)
+    o = _as_scalar(last.get("open", last.get("Open", np.nan)), default=np.nan)
+    h = _as_scalar(last.get("high", last.get("High", np.nan)), default=np.nan)
+    lo = _as_scalar(last.get("low", last.get("Low", np.nan)), default=np.nan)
+    body = abs(c - o)
+    lower_wick = (min(o, c) - lo)
+    upper_wick = (h - max(o, c))
     return (lower_wick > 2 * body) and (upper_wick < body)
 
 

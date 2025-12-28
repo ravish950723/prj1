@@ -6,7 +6,8 @@ def score_institutional_investor(df):
         # Relative volume spike vs trailing average
         volume_20 = df['volume'].rolling(20).mean()
         volume_50 = df['volume'].rolling(50).mean()
-        volume_score = volume_20 / volume_50
+        volume_score = (volume_20 / volume_50).clip(0.5, 2.0)
+
 
         # OBV slope as proxy for accumulation
         obv_slope = df['OBV'].diff().rolling(5).mean()

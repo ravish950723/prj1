@@ -1,15 +1,74 @@
 import pandas as pd
 import numpy as np
 
-from config import UPWARD_SIGNAL_WEIGHTS, VIX_ADAPTIVE_WEIGHTS
+
+# ================================
+# Scalar/boolean safety helpers
+# Avoid: "The truth value of a Series is ambiguous"
+# ================================
+def _as_scalar(x, default=None):
+    """Convert Series/array/scalar to a float scalar (last element for Series)."""
+    try:
+        import numpy as _np
+        if default is None:
+            default = _np.nan
+        import pandas as _pd
+        if isinstance(x, _pd.Series):
+            if x.empty:
+                return default
+            x = x.iloc[-1]
+        elif isinstance(x, _np.ndarray):
+            if x.size == 0:
+                return default
+            x = x.reshape(-1)[-1]
+        elif isinstance(x, (list, tuple)):
+            if len(x) == 0:
+                return default
+            x = x[-1]
+        if x is None:
+            return default
+        v = float(x)
+        if _np.isfinite(v):
+            return v
+        return default
+    except Exception:
+        return default
+
+def _as_bool(x, default=False):
+    """Convert Series/array/scalar to bool (last element for Series)."""
+    try:
+        import numpy as _np
+        import pandas as _pd
+        if isinstance(x, _pd.Series):
+            if x.empty:
+                return default
+            x = x.iloc[-1]
+        elif isinstance(x, _np.ndarray):
+            if x.size == 0:
+                return default
+            x = x.reshape(-1)[-1]
+        elif isinstance(x, (list, tuple)):
+            if len(x) == 0:
+                return default
+            x = x[-1]
+        if x is None:
+            return default
+        if isinstance(x, (float, _np.floating)) and _np.isnan(x):
+            return default
+        return bool(x)
+    except Exception:
+        return default
 
 def detect_smc_accumulation_breakout(df):
     recent = df.tail(20)
     if len(recent) < 20:
         return False
-    tight_range = recent['high'].max() - recent['low'].min() < 0.05 * recent['close'].iloc[-1]
-    breakout = df.iloc[-1]['close'] > recent['high'].max()
-    volume_spike = df.iloc[-1]['volume'] > 1.5 * recent['volume'].mean()
+    close_last = _as_scalar(recent['close'].iloc[-1], default=np.nan)
+    hi = _as_scalar(recent['high'].max(), default=np.nan)
+    lo = _as_scalar(recent['low'].min(), default=np.nan)
+    tight_range = (np.isfinite(hi) and np.isfinite(lo) and np.isfinite(close_last) and (hi - lo) < 0.05 * close_last)
+    breakout = _as_scalar(df.iloc[-1].get('close', np.nan), default=np.nan) > _as_scalar(recent['high'].max(), default=np.nan)
+    volume_spike = _as_scalar(df.iloc[-1].get('volume', np.nan), default=np.nan) > 1.5 * _as_scalar(recent['volume'].mean(), default=np.nan)
     return tight_range and breakout and volume_spike
 
 def detect_mean_reversion_buy(df):
@@ -53,63 +112,30 @@ def compute_upward_trend(df):
     ).astype(int)
     return df
 
-def _vix_bucket(vix_regime: str | None) -> str:
-    if not vix_regime:
-        return "NORMAL"
-    vr = str(vix_regime).upper()
-    # match common labels like HIGH / MEDIUM / LOW
-    for k in ("HIGH", "MEDIUM", "LOW", "NORMAL"):
-        if k in vr:
-            return k
-    return "NORMAL"
-
-def _apply_vix_adaptation(weights: dict, vix_regime: str | None) -> dict:
-    """Return a copy of weights with VIX-adaptive adjustments applied."""
-    bucket = _vix_bucket(vix_regime)
-    adapt = VIX_ADAPTIVE_WEIGHTS.get(bucket, VIX_ADAPTIVE_WEIGHTS.get("NORMAL", {}))
-    wmult = float(adapt.get("weight_mult", 1.0))
-    bt_mult = float(adapt.get("buy_threshold_mult", 1.0))
-    ms_add = int(adapt.get("min_signals_add", 0))
-
-    out = dict(weights)
-    # scale pattern weights (not thresholds)
-    for k in ("smc", "mean_reversion", "bullish_engulfing", "hammer", "trend_strength"):
-        if k in out:
-            out[k] = float(out.get(k, 0.0)) * wmult
-
-    # thresholds become stricter in higher vol (bt_mult > 1)
-    out["buy_threshold"] = float(out.get("buy_threshold", 0.0)) * bt_mult
-    out["min_signals"] = int(out.get("min_signals", 1)) + ms_add
-    return out
-
-def compute_signal_score(signals: dict, vix_regime: str | None = None) -> float:
-    """
-    Computes composite upward signal score using configurable weights.
-    Optionally applies VIX-adaptive adjustments when vix_regime is provided.
-    """
-    weights = _apply_vix_adaptation(UPWARD_SIGNAL_WEIGHTS, vix_regime) if vix_regime else dict(UPWARD_SIGNAL_WEIGHTS)
-
+def compute_signal_score(df):
     score = 0.0
     signal_count = 0
 
-    signal_map = {
-        "smc": bool(signals.get("smc_breakout", False)),
-        "mean_reversion": bool(signals.get("mean_reversion", False)),
-        "bullish_engulfing": bool(signals.get("bullish_engulfing", False)),
-        "hammer": bool(signals.get("hammer", False)),
-    }
+    if detect_smc_accumulation_breakout(df):
+        score += 0.05
+        signal_count += 1
 
-    for key, fired in signal_map.items():
-        if fired:
-            score += float(weights.get(key, 0.0))
-            signal_count += 1
+    if detect_mean_reversion_buy(df):
+        score += 0.03
+        signal_count += 1
 
-    trend_strength = float(signals.get("trend_strength", 0.0) or 0.0)
-    if trend_strength > 0:
-        score += float(weights.get("trend_strength", 0.0))
+    if detect_bullish_engulfing(df):
+        score += 0.03
+        signal_count += 1
 
-    # Minimum confirmation gate
-    if signal_count < int(weights.get("min_signals", 1)):
-        return 0.0
+    if detect_hammer(df):
+        score += 0.03
+        signal_count += 1
 
-    return round(float(score), 3)
+    df = compute_upward_trend(df)
+    if df.iloc[-1].get("trend_strength", 0) == 1:
+        score += 0.01
+        signal_count += 1
+
+    recommendation = "BUY" if score > 0.08 and signal_count >= 2 else "HOLD"
+    return score, signal_count, recommendation

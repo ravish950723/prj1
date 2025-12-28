@@ -4,6 +4,67 @@
 
 from __future__ import annotations
 
+
+import pandas as pd
+import numpy as np
+
+# ================================
+# Scalar/boolean safety helpers
+# Avoid: "The truth value of a Series is ambiguous"
+# ================================
+def _as_scalar(x, default=None):
+    """Convert Series/array/scalar to a float scalar (last element for Series)."""
+    try:
+        import numpy as _np
+        if default is None:
+            default = _np.nan
+        import pandas as _pd
+        if isinstance(x, _pd.Series):
+            if x.empty:
+                return default
+            x = x.iloc[-1]
+        elif isinstance(x, _np.ndarray):
+            if x.size == 0:
+                return default
+            x = x.reshape(-1)[-1]
+        elif isinstance(x, (list, tuple)):
+            if len(x) == 0:
+                return default
+            x = x[-1]
+        if x is None:
+            return default
+        v = float(x)
+        if _np.isfinite(v):
+            return v
+        return default
+    except Exception:
+        return default
+
+def _as_bool(x, default=False):
+    """Convert Series/array/scalar to bool (last element for Series)."""
+    try:
+        import numpy as _np
+        import pandas as _pd
+        if isinstance(x, _pd.Series):
+            if x.empty:
+                return default
+            x = x.iloc[-1]
+        elif isinstance(x, _np.ndarray):
+            if x.size == 0:
+                return default
+            x = x.reshape(-1)[-1]
+        elif isinstance(x, (list, tuple)):
+            if len(x) == 0:
+                return default
+            x = x[-1]
+        if x is None:
+            return default
+        if isinstance(x, (float, _np.floating)) and _np.isnan(x):
+            return default
+        return bool(x)
+    except Exception:
+        return default
+
 import os
 import json
 from typing import Any, Dict, Optional, Tuple, List
@@ -101,7 +162,9 @@ def _calc_signal_score(df: pd.DataFrame) -> float:
 
     last = df.iloc[-1]
 
-    add(bool(last.get("vwap_support", np.nan) and last["close"] >= last["vwap_support"]), 0.15)
+    vwap_sup = _as_scalar(last.get("vwap_support", np.nan), default=np.nan)
+    close_v  = _as_scalar(last.get("close", last.get("Close", np.nan)), default=np.nan)
+    add(bool(np.isfinite(vwap_sup) and np.isfinite(close_v) and close_v >= vwap_sup), 0.15)
     add(bool(last.get("ema_uptrend", False)), 0.15)
     add(bool(last.get("macd_cross", False)), 0.10)
     add(bool(last.get("rsi_state", "") in ("RISING", "BULLISH")), 0.10)
@@ -266,7 +329,7 @@ def expected_holding_period(
     if trend_htf == "Bullish" and adx >= 25 and ("MARKUP" in stage or "ACCUMULATION" in stage):
         return "3–6 months (trend ride)"
 
-    if mean_reversion:
+    if _as_bool(mean_reversion):
         return "2–6 weeks (mean reversion)"
 
     if "DISTRIBUTION" in stage:

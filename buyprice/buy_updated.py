@@ -267,65 +267,6 @@ def _tech_fallback_score(snap: dict, df: pd.DataFrame, smc_breakout: bool, mean_
     return round(score, 2)
 
 
-def _compute_momentum_fields(res: dict, df: pd.DataFrame, snap: dict) -> dict:
-    """Create the 4 Momentum* columns in a robust, purely-technical way.
-
-    This is intentionally simple + deterministic so it never leaves Excel blanks.
-    """
-    ema_up = bool(snap.get("EMA_Uptrend", False))
-    adx = float(snap.get("ADX", np.nan))
-    adx_strong = np.isfinite(adx) and adx >= 25
-    rsi = float(snap.get("RSI_14", np.nan))
-    obv_trend = str(snap.get("OBV_Trend", "") or "")
-    vol_pressure = float(res.get("Volume Pressure", 0.0) or 0.0)
-
-    rsi_ok = np.isfinite(rsi) and 45 <= rsi <= 70
-    obv_up = obv_trend.lower().startswith("up")
-    vp_ok = vol_pressure > 0
-
-    mom = 0.0
-    mom += 0.35 if ema_up else 0.0
-    mom += 0.25 if adx_strong else 0.0
-    mom += 0.15 if rsi_ok else 0.0
-    mom += 0.15 if obv_up else 0.0
-    mom += 0.10 if vp_ok else 0.0
-    mom = float(np.clip(mom, 0.0, 1.0))
-
-    if mom >= 0.75:
-        reco = "MOMO BUY"
-        grade = "A"
-        hold = "4–12 weeks"
-    elif mom >= 0.60:
-        reco = "MOMO WATCH"
-        grade = "B"
-        hold = "2–8 weeks"
-    elif mom >= 0.45:
-        reco = "MOMO NEUTRAL"
-        grade = "C"
-        hold = "1–4 weeks"
-    else:
-        reco = "MOMO AVOID"
-        grade = "D"
-        hold = "N/A"
-
-    reason_parts = []
-    reason_parts.append("EMA↑" if ema_up else "EMA↓")
-    reason_parts.append("ADX≥25" if adx_strong else "ADX<25")
-    if np.isfinite(rsi):
-        reason_parts.append(f"RSI={rsi:.0f}")
-    if obv_trend:
-        reason_parts.append(f"OBV={obv_trend}")
-    reason_parts.append(f"VolPress={vol_pressure:.2f}")
-
-    return {
-        "Momentum Recommendation": reco,
-        "Momentum Decision Reason": " + ".join([p for p in reason_parts if p]),
-        "Momentum Confidence Grade": grade,
-        "Momentum Expected Holding Period": hold,
-        "_momentum_score": round(mom, 3),
-    }
-
-
 
 # -----------------------------
 # Derived columns for Excel (Breakout / Undervalued / Trend Reversal / Pattern Detected / DipReclaim)
@@ -348,29 +289,6 @@ def _is_yes(v: object) -> bool:
 
 def _yes_no(flag: bool) -> str:
     return "✅" if bool(flag) else "❌"
-
-
-def _bool_scalar(v: object) -> bool:
-    """Safely coerce possibly-arraylike values (Series/ndarray) into a Python bool."""
-    try:
-        import pandas as _pd
-        if isinstance(v, _pd.Series):
-            if v.empty:
-                return False
-            try:
-                return bool(v.iloc[-1])
-            except Exception:
-                return bool(v.any())
-    except Exception:
-        pass
-    try:
-        if isinstance(v, (list, tuple, np.ndarray)):
-            if len(v) == 0:
-                return False
-            return bool(v[-1])
-    except Exception:
-        pass
-    return bool(v)
 
 def _pattern_list(row: dict) -> str:
     patterns = []
@@ -565,21 +483,6 @@ def add_trade_management_columns(df_summary: pd.DataFrame) -> pd.DataFrame:
         entry, entry_src = _choose_primary_entry(r)
         addp = _choose_add_on(entry_src, r)
         stop = _num(r.get("Atr Trailing Stop"))
-        # Fallback stops if ATR stop is missing
-        if not np.isfinite(stop) or stop <= 0:
-            stop = _num(r.get("Invalidation_Level"))
-        if not np.isfinite(stop) or stop <= 0:
-            stop = _num(r.get("VWAP Support"))
-        if not np.isfinite(stop) or stop <= 0:
-            stop = _num(r.get("Candle Entry 8w"))
-        if not np.isfinite(stop) or stop <= 0:
-            stop = _num(r.get("Candle Entry 12w"))
-        # Ensure stop is below entry (otherwise default to 3% below entry)
-        if np.isfinite(entry) and entry > 0:
-            if not np.isfinite(stop) or stop <= 0:
-                stop = entry * 0.97
-            elif stop >= entry:
-                stop = min(stop, entry * 0.97)
 
         primary_entry.append(entry if np.isfinite(entry) else None)
         add_on.append(addp if np.isfinite(addp) else None)
@@ -611,12 +514,7 @@ def add_trade_management_columns(df_summary: pd.DataFrame) -> pd.DataFrame:
         # Use 90D Gain (%) as reward proxy (already in your sheet)
         rew = _num(r.get("90D Gain (%)"))
         if not np.isfinite(rew):
-            # If backtest gain is unavailable, use a conservative proxy for BUY/STRONG BUY
-            sig = str(r.get("Signal") or r.get("Recommendation") or "").strip().upper()
-            if sig in {"BUY", "STRONG_BUY", "STRONG BUY"}:
-                rew = 15.0
-            else:
-                rew = np.nan
+            rew = np.nan
 
         risk_pct.append(round(rp, 2) if np.isfinite(rp) else None)
         reward_pct.append(round(rew, 2) if np.isfinite(rew) else None)
@@ -629,7 +527,7 @@ def add_trade_management_columns(df_summary: pd.DataFrame) -> pd.DataFrame:
         rr_for_rank.append(rr if np.isfinite(rr) else 0.0)
 
         # Decision gate
-        exit_now = _bool_scalar(r.get("Exit Now", False))
+        exit_now = bool(r.get("Exit Now", False))
         trend_ok = _is_up_trend(r.get("Trend"))
         stage_ok = _is_stage_ok(r.get("Market Stage"))
         buy_confirm = (
@@ -733,6 +631,102 @@ def add_trade_management_columns(df_summary: pd.DataFrame) -> pd.DataFrame:
 
     out["Best_Risk_Reward"] = grades
     return out
+
+
+# -----------------------------
+# Momentum (breakout vs pullback) columns
+# -----------------------------
+def add_momentum_columns(df_summary: pd.DataFrame) -> pd.DataFrame:
+    """Populate Momentum* columns using a lightweight institutional momentum rubric.
+
+    This is intentionally rule-based (no ML dependency) so the Excel columns
+    are always populated.
+
+    Required inputs (best-effort; missing inputs fall back gracefully):
+      EMA Uptrend, EMA21 Slope, ADX, MACD Cross, RSI, OBV Trend, Volume Surge, SMC_Breakout
+    """
+    out = df_summary.copy()
+
+    for col in [
+        "Momentum Recommendation",
+        "Momentum Decision Reason",
+        "Momentum Confidence Grade",
+        "Momentum Expected Holding Period",
+    ]:
+        if col not in out.columns:
+            out[col] = None
+
+    def _boolish(v) -> bool:
+        if isinstance(v, (bool, np.bool_)):
+            return bool(v)
+        s = str(v).strip().upper()
+        return s in ("✅", "TRUE", "1", "YES", "Y")
+
+    def _momentum_for_row(r: dict):
+        ema_up = _boolish(r.get("EMA Uptrend"))
+        macd = _boolish(r.get("MACD Cross"))
+        smc = _boolish(r.get("SMC_Breakout"))
+        vol_surge = _boolish(r.get("Volume Surge"))
+
+        obv = str(r.get("OBV Trend", "")).upper()
+        obv_bull = ("UP" in obv) or ("BULL" in obv) or (obv.strip() == "✅")
+
+        rsi = pd.to_numeric(pd.Series([r.get("RSI")]), errors="coerce").iloc[0]
+        adx = pd.to_numeric(pd.Series([r.get("ADX")]), errors="coerce").iloc[0]
+        slope = pd.to_numeric(pd.Series([r.get("EMA21 Slope")]), errors="coerce").iloc[0]
+
+        score = 0
+        reasons = []
+        if ema_up:
+            score += 2; reasons.append("EMA uptrend")
+        if np.isfinite(slope) and slope > 0:
+            score += 1; reasons.append("EMA21 rising")
+        if np.isfinite(adx) and adx >= 20:
+            score += 1; reasons.append("ADX strong")
+        if macd:
+            score += 1; reasons.append("MACD bullish")
+        if np.isfinite(rsi) and 50 <= rsi <= 75:
+            score += 1; reasons.append("RSI healthy")
+        if obv_bull:
+            score += 1; reasons.append("OBV up")
+        if vol_surge:
+            score += 1; reasons.append("Volume surge")
+        if smc:
+            score += 1; reasons.append("SMC breakout")
+
+        if score >= 7 and (smc or vol_surge):
+            rec = "MOMO_BREAKOUT"
+            hold = "4-12 weeks"
+        elif score >= 5:
+            rec = "MOMO_PULLBACK"
+            hold = "2-8 weeks"
+        else:
+            rec = "NO_MOMO"
+            hold = "N/A"
+
+        if score >= 8:
+            grade = "A"
+        elif score >= 6:
+            grade = "B"
+        elif score >= 4:
+            grade = "C"
+        else:
+            grade = "D"
+
+        reason = " + ".join(reasons) if reasons else "Insufficient momentum confirmation"
+        return rec, reason, grade, hold
+
+    for idx, row in out.iterrows():
+        # Only fill if blank/NaN
+        if pd.isna(out.at[idx, "Momentum Recommendation"]):
+            rec, reason, grade, hold = _momentum_for_row(row.to_dict())
+            out.at[idx, "Momentum Recommendation"] = rec
+            out.at[idx, "Momentum Decision Reason"] = reason
+            out.at[idx, "Momentum Confidence Grade"] = grade
+            out.at[idx, "Momentum Expected Holding Period"] = hold
+
+    return out
+
 
 # -----------------------------
 # Excel header matching (fix blanks)
@@ -890,44 +884,6 @@ def write_template_excel(df: pd.DataFrame, template_path: Path, out_path: Path, 
     wb.save(out_path)
 
 
-
-# -----------------------------
-# Column normalization (single source of truth)
-# -----------------------------
-def normalize_output_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize *once* so internal keys and Excel headers never drift."""
-    if df is None or df.empty:
-        return df
-    out = df.copy()
-    out.columns = [str(c).strip() for c in out.columns]
-    aliases = {
-        "Momentum_Recommendation": "Momentum Recommendation",
-        "Momentum_Decision_Reason": "Momentum Decision Reason",
-        "Momentum_Confidence_Grade": "Momentum Confidence Grade",
-        "Momentum_Expected_Holding_Period": "Momentum Expected Holding Period",
-        "Tech_Fallback_Score": "Tech Fallback Score",
-        "Atr_Trailing_Stop": "Atr Trailing Stop",
-        "Exit_Reasons": "Exit Reasons",
-        "EMA_Uptrend": "EMA Uptrend",
-        "EMA21_Slope": "EMA21 Slope",
-        "ADX_Strength": "ADX Strength",
-        "MACD_Cross": "MACD Cross",
-        "RSI_State": "RSI State",
-        "OBV_Trend": "OBV Trend",
-        "At_BB_Lower": "At BB Lower",
-        "VIX_Vol_Regime": "VIX Vol Regime",
-        "VIX_vol_regime": "VIX Vol Regime",
-        "Sym_Vol_Regime": "Sym Vol Regime",
-        "sym_vol_regime": "Sym Vol Regime",
-        "Market_regime": "Vol Regime",
-        "Market Regime": "Vol Regime",
-        "Vol_Regime": "Vol Regime",
-    }
-    ren = {c: aliases[c] for c in out.columns if c in aliases}
-    if ren:
-        out.rename(columns=ren, inplace=True)
-    return out
-
 def main():
     args = parse_args()
 
@@ -971,182 +927,149 @@ def main():
 
     # Second pass: enrichment
     hit_list, gain_list, days_list = [], [], []
-    # Second pass: enrichment
-    hit_list, gain_list, days_list = [], [], []
     for res in summary:
         symbol = res.get("Symbol", "")
-        df = None
-
-        # Always try to get indicators dataframe first (required for most columns)
         try:
             df_raw = load_symbol_df(symbol, args)
             df = compute_indicators(df_raw.copy(), symbol=symbol)
-        except Exception as e:
-            print(f"⚠️ {symbol}: compute_indicators failed ({e})")
-            df = None
 
-        if df is None or getattr(df, "empty", True):
-            # Fill required fields with safe defaults so Excel doesn't stay blank
-            res.setdefault("Tech Fallback Score", 0.0)
-            res.setdefault("Signal", "N/A")
-            for k in [
-                "Momentum Recommendation","Momentum Decision Reason","Momentum Confidence Grade","Momentum Expected Holding Period",
-                "EMA Uptrend","EMA21 Slope","ADX Strength","MACD Cross","RSI","RSI State","OBV Trend","At BB Lower",
-                "SMC_Breakout","Sym Vol Regime","VIX Vol Regime","Vol Regime","Volume Pressure","Atr Trailing Stop","Exit Reasons"
-            ]:
-                res.setdefault(k, None)
-            hit_list.append("❌"); gain_list.append(None); days_list.append("N/A")
-            continue
+            # Latest price (needed for Buy_Window_Status / chase checks)
+            try:
+                res["Current Price"] = round(float(df["close"].iloc[-1]), 2)
+            except Exception:
+                res["Current Price"] = None
 
-        # --- Price ---
-        try:
-            res["Current Price"] = round(float(df["close"].iloc[-1]), 2)
-        except Exception:
-            res["Current Price"] = None
+            # EPS flags
+            eps_df = fetch_quarterly_eps(symbol)
+            eps_flags = eps_growth_flags(eps_df)
+            res["EPS Increase 2Q"] = eps_flags["EPS Increase 2Q"]
+            res["EPS Increase 3Q"] = eps_flags["EPS Increase 3Q"]
+            res["EPS Increase 4Q"] = eps_flags["EPS Increase 4Q"]
 
-        # --- Snapshot technicals (MUST NOT be skipped) ---
-        snap = _compute_indicator_snap(df)
-        res["EMA Uptrend"] = "✅" if snap.get("EMA_Uptrend") else "❌"
-        ema_slope = snap.get("EMA21_Slope", np.nan)
-        res["EMA21 Slope"] = round(float(ema_slope), 4) if np.isfinite(float(ema_slope)) else None
-        res["ADX Strength"] = snap.get("ADX_Strength")
-        res["MACD Cross"] = snap.get("MACD_Crossover")
-        rsi = snap.get("RSI_14", np.nan)
-        res["RSI"] = round(float(rsi), 1) if np.isfinite(float(rsi)) else None
-        res["RSI State"] = snap.get("RSI_State")
-        res["OBV Trend"] = snap.get("OBV_Trend")
-        res["At BB Lower"] = snap.get("At_BB_Lower")
+            # News sentiment
+            sent = fetch_market_sentiment(symbol)
+            res["News Sentiment Score"] = round(float(sent.get("news_sentiment_score") or 0.0), 4)
+            res["News Positive Ratio"] = round(float(sent.get("news_positive_ratio") or 0.0), 4)
+            res["News Article Count"] = int(sent.get("news_article_count") or 0)
+            conf = sent.get("sentiment_confidence")
+            if conf is None or conf == "":
+                n_art = int(sent.get("news_article_count") or 0)
+                if n_art >= 15:
+                    conf = "HIGH"
+                elif n_art >= 5:
+                    conf = "MED"
+                elif n_art > 0:
+                    conf = "LOW"
+                else:
+                    conf = None
+            res["Sentiment Confidence"] = conf
 
-        # --- Regimes / pressure (best-effort) ---
-        last = df.iloc[-1]
-        res["Sym Vol Regime"] = int(last.get("sym_vol_regime", 0)) if str(last.get("sym_vol_regime", "")).strip() != "" else None
-        res["VIX Vol Regime"] = int(last.get("VIX_vol_regime", 0)) if str(last.get("VIX_vol_regime", "")).strip() != "" else None
-        # If compute.py provides a market regime column, map it to "Vol Regime"
-        res["Vol Regime"] = last.get("Market_regime", last.get("market_regime", last.get("Vol Regime", None)))
-        # Volume pressure (prefer explicit; fallback to volume_weight)
-        vp = last.get("volume_pressure", last.get("Volume Pressure", last.get("volume_weight", None)))
-        try:
-            res["Volume Pressure"] = float(vp) if vp is not None and np.isfinite(float(vp)) else None
-        except Exception:
-            res["Volume Pressure"] = None
+            # Price-action signals
+            df = compute_upward_trend(df)
+            signal_score, signal_count, pa_reco = compute_signal_score(df)
+            res["Signal Score"] = round(float(signal_score), 2)
+            res["Signal Count"] = int(signal_count)
+            res["Signal"] = pa_reco
 
-        # --- SMC breakout (best-effort) ---
-        try:
+            # Pattern booleans
             smc = bool(detect_smc_accumulation_breakout(df))
-        except Exception:
-            smc = False
-        res["SMC_Breakout"] = "✅" if smc else "❌"
+            mean_rev = bool(detect_mean_reversion_buy(df))
+            res["SMC_Breakout"] = smc
+            res["Mean_Reversion"] = mean_rev
+            res["Bullish_Engulfing"] = bool(detect_bullish_engulfing(df))
+            res["Hammer"] = bool(detect_hammer(df))
+            res["Trend_Strength"] = int(df.iloc[-1].get("trend_strength", 0))
 
-        # --- Momentum block (MUST NOT be skipped) ---
-        try:
-            mom_fields = _compute_momentum_fields(res, df, snap)
-        except Exception as e:
-            mom_fields = {
-                "Momentum Recommendation": None,
-                "Momentum Decision Reason": f"momentum_failed: {e}",
-                "Momentum Confidence Grade": None,
-                "Momentum Expected Holding Period": None,
-            }
-        res["Momentum Recommendation"] = mom_fields.get("Momentum Recommendation")
-        res["Momentum Decision Reason"] = mom_fields.get("Momentum Decision Reason")
-        res["Momentum Confidence Grade"] = mom_fields.get("Momentum Confidence Grade")
-        res["Momentum Expected Holding Period"] = mom_fields.get("Momentum Expected Holding Period")
+            # Regimes / volume pressure
+            res["Sym Vol Regime"] = int(df.iloc[-1].get("sym_vol_regime", 0))
+            res["VIX Vol Regime"] = int(df.iloc[-1].get("VIX_vol_regime", 0))
+            res["Volume Pressure"] = float(df.iloc[-1].get("volume_pressure", 0.0))
 
-        # --- Exit signals (best-effort) ---
-        entry = res.get("Refined Buy Price", None)
-        try:
-            entry_price = float(entry) if entry is not None and not (isinstance(entry, float) and np.isnan(entry)) else float(df["close"].iloc[-1])
-        except Exception:
-            entry_price = float(df["close"].iloc[-1])
+            # Snapshot
+            snap = _compute_indicator_snap(df)
+            res["EMA Uptrend"] = "✅" if snap["EMA_Uptrend"] else "❌"
+            res["EMA21 Slope"] = round(snap["EMA21_Slope"], 4) if np.isfinite(snap["EMA21_Slope"]) else None
+            res["ADX Strength"] = snap["ADX_Strength"]
+            res["MACD Cross"] = snap["MACD_Crossover"]
+            res["RSI"] = round(snap["RSI_14"], 1) if np.isfinite(snap["RSI_14"]) else None
+            res["RSI State"] = snap["RSI_State"]
+            res["OBV Trend"] = snap["OBV_Trend"]
+            res["At BB Lower"] = snap["At_BB_Lower"]
 
-        try:
-            exit_info = compute_exit_signals(df, entry_price=entry_price)
-            res["Atr Trailing Stop"] = exit_info.get("atr_trailing_stop")
-            res["Exit Reasons"] = exit_info.get("exit_reasons")
-            res["Exit Now"] = bool(exit_info.get("exit_now", False))
-        except Exception as e:
-            res["Atr Trailing Stop"] = None
-            res["Exit Reasons"] = f"exit_failed: {e}"
-            res["Exit Now"] = False
+            # Rule-based SMA cross + confidence threshold
+            df["SMA_20"] = df["close"].rolling(window=20).mean()
+            df["SMA_50"] = df["close"].rolling(window=50).mean()
+            df["SMA_cross_signal"] = (df["SMA_20"] > df["SMA_50"]) & (df["SMA_20"].shift(1) <= df["SMA_50"].shift(1))
+            conf = float(res.get("Confidence Score", 0.0) or 0.0)
+            rule_based_buy = bool(df["SMA_cross_signal"].iloc[-1]) and conf > BUY_THRESH
+            res["Rule-Based Buy"] = "✅" if rule_based_buy else "❌"
 
-        # --- Model probability + confidence band (best-effort) ---
-        try:
+            # Model proba + band
             prob = _predict_proba_for_last_row(symbol, df)
             res["Model Probability"] = round(float(prob), 2)
             res["Model-Driven Buy"] = "✅" if prob >= BUY_THRESH else "❌"
             res["Model-Driven Strong Buy"] = "✅" if prob >= STRONG_BUY_THRESH else "❌"
             res["Confidence Band"] = get_confidence_band(prob)
+
+            # Exit signals (entry = Refined Buy Price)
+            entry = res.get("Refined Buy Price", None)
+            try:
+                entry_price = float(entry) if entry is not None and not (isinstance(entry, float) and np.isnan(entry)) else float(df["close"].iloc[-1])
+            except Exception:
+                entry_price = float(df["close"].iloc[-1])
+
+            exit_info = compute_exit_signals(df, entry_price=entry_price)
+            res["Exit Now"] = bool(exit_info.get("ExitNow", False))
+            res["Atr Trailing Stop"] = exit_info.get("AtrTrailingStop", None)
+            res["Exit Reasons"] = exit_info.get("ExitReasons", "")
+
+            # Safety
+            if bool(res.get("Exit Now", False)):
+                res["Signal"] = "HOLD (Exit risk)"
+                res["Model-Driven Buy"] = "❌"
+                res["Model-Driven Strong Buy"] = "❌"
+                res["Confidence Band"] = "NO TRADE"
+
+            # Tech fallback
+            if prob < BUY_THRESH:
+                tech_score = _tech_fallback_score(snap, df, smc, mean_rev)
+                res["Tech Fallback Score"] = tech_score
+                if (not bool(res.get("Exit Now", False))) and snap.get("EMA_Uptrend") and tech_score >= TECH_BUY_FALLBACK and signal_count >= 2:
+                    res["Signal"] = "BUY (Tech Fallback)"
+            else:
+                res["Tech Fallback Score"] = 0.0
+
+            # Backtest (90D)
+            hit, gain, days_to_peak = evaluate_backtest_accuracy(symbol, df, entry_price, gain_thresh=0.04, use_close=True)
+
         except Exception as e:
+            print(f"⚠️ {symbol}: enrichment/backtest failed ({e})")
+            hit, gain, days_to_peak = False, 0.0, -1
             res.setdefault("Model Probability", 0.0)
             res.setdefault("Model-Driven Buy", "❌")
             res.setdefault("Model-Driven Strong Buy", "❌")
             res.setdefault("Confidence Band", "WATCH")
-            prob = float(res.get("Model Probability") or 0.0)
-
-        # --- Tech fallback score + Signal (MUST NOT be skipped) ---
-        mean_rev = bool(res.get("Mean_Reversion") in ("✅", True, "True"))
-        signal_count = int(smc) + int(mean_rev) + int(snap.get("EMA_Uptrend", False))
-        if prob < BUY_THRESH:
-            tech_score = _tech_fallback_score(snap, df, smc, mean_rev)
-            res["Tech Fallback Score"] = float(tech_score)
-            if (not _bool_scalar(res.get("Exit Now", False))) and tech_score >= TECH_BUY_FALLBACK and signal_count >= 2:
-                res["Signal"] = "BUY (Tech Fallback)"
-            else:
-                res.setdefault("Signal", "WATCH")
-        else:
-            res["Tech Fallback Score"] = 0.0
-            res.setdefault("Signal", "BUY" if prob >= BUY_THRESH else "WATCH")
-
-        if _bool_scalar(res.get("Exit Now", False)):
-            res["Signal"] = "HOLD (Exit risk)"
-            res["Model-Driven Buy"] = "❌"
-            res["Model-Driven Strong Buy"] = "❌"
-            res["Confidence Band"] = "NO TRADE"
-
-        # --- EPS flags (optional) ---
-        try:
-            eps_df = fetch_quarterly_eps(symbol)
-            eps_flags = eps_growth_flags(eps_df)
-            res["EPS Increase 2Q"] = eps_flags.get("EPS Increase 2Q")
-            res["EPS Increase 3Q"] = eps_flags.get("EPS Increase 3Q")
-            res["EPS Increase 4Q"] = eps_flags.get("EPS Increase 4Q")
-        except Exception as e:
-            # Do not break enrichment if EPS fails
-            res.setdefault("EPS Increase 2Q", None)
-            res.setdefault("EPS Increase 3Q", None)
-            res.setdefault("EPS Increase 4Q", None)
-
-        # --- News sentiment (optional) ---
-        try:
-            sent = fetch_market_sentiment(symbol)
-            res["News Sentiment Score"] = round(float(sent.get("news_sentiment_score") or 0.0), 4)
-            res["News Positive Ratio"] = round(float(sent.get("news_positive_ratio") or 0.0), 4)
-            res["News Article Count"] = int(sent.get("news_article_count") or 0)
-        except Exception:
-            res.setdefault("News Sentiment Score", None)
-            res.setdefault("News Positive Ratio", None)
-            res.setdefault("News Article Count", None)
-
-        # --- Backtest (90D) - isolate because it is currently failing with Series truth ambiguity ---
-        try:
-            hit, gain, days_to_peak = evaluate_backtest_accuracy(symbol, df, entry_price, gain_thresh=0.04, use_close=True)
-        except Exception as e:
-            print(f"⚠️ {symbol}: backtest failed ({e})")
-            hit, gain, days_to_peak = False, 0.0, -1
 
         hit_list.append("✅" if hit else "❌")
-        gain_list.append(round(float(gain), 2) if gain is not None and np.isfinite(float(gain)) else None)
-        days_list.append(int(days_to_peak) if isinstance(days_to_peak, (int, np.integer)) and int(days_to_peak) >= 0 else "N/A")
-    df_summary = pd.DataFrame(summary)
+        gain_list.append(round(float(gain), 2) if np.isfinite(float(gain)) else None)
+        days_list.append(int(days_to_peak) if isinstance(days_to_peak, int) and days_to_peak >= 0 else "N/A")
 
-    # Normalize column names once to prevent future mismatches
-    df_summary = normalize_output_columns(df_summary)
+    df_summary = pd.DataFrame(summary)
 
     # Add derived user-friendly columns (Breakout/Undervalued/Reversal/Patterns/DipReclaim)
     df_summary = add_excel_derived_columns(df_summary)
 
     # Add actionable trade-management columns
     df_summary = add_trade_management_columns(df_summary)
+
+    # Populate Momentum* columns (breakout vs pullback rubric)
+    df_summary = add_momentum_columns(df_summary)
+
+    # Ensure Exit Reasons is never blank (keeps Excel column populated)
+    if "Exit Reasons" in df_summary.columns:
+        er = df_summary["Exit Reasons"].astype(str).fillna("").str.strip()
+        df_summary["Exit Reasons"] = np.where(er.eq(""), "No exit signals", er)
+
 
     # Ensure Candle Entry columns exist
     for col in [
@@ -1215,13 +1138,80 @@ def main():
             df_summary[col] = None
     out_df = df_summary[columns_to_display].copy()
 
-    # Replace NaN/inf with None before writing
+    # Ensure Exit Reasons always populated in the exported sheet
+    if "Exit Reasons" in out_df.columns:
+        er = out_df["Exit Reasons"].astype(str).fillna("").str.strip()
+        out_df["Exit Reasons"] = np.where(er.eq(""), "No exit signals", er)
+
+
+    # ------------------------------------------------------------------
+    # FINAL SAFETY PASS: Force-fill Risk_% and Reward_% right before writing.
+    # This guarantees the Excel columns are never blank even if upstream
+    # logic produced NaN/None due to earlier fallbacks.
+    # ------------------------------------------------------------------
+    def _sf(v, default=np.nan):
+        try:
+            if isinstance(v, pd.Series):
+                v = v.iloc[-1] if len(v) else default
+            v = float(v)
+            return v if np.isfinite(v) else default
+        except Exception:
+            return default
+
+    if "Risk_%" in out_df.columns:
+        entry = pd.to_numeric(out_df.get("Primary_Entry_Price"), errors="coerce")
+        if entry is None:
+            entry = pd.Series([np.nan] * len(out_df))
+        stop = pd.to_numeric(out_df.get("Invalidation_Level"), errors="coerce")
+        if stop is None:
+            stop = pd.Series([np.nan] * len(out_df))
+
+        # If stop missing, fall back to ATR / VWAP / candle supports, then 3% below entry
+        if stop.isna().all():
+            for c in ["Atr Trailing Stop", "VWAP Support", "Candle Entry 8w", "Candle Entry 12w"]:
+                if c in out_df.columns:
+                    cand = pd.to_numeric(out_df.get(c), errors="coerce")
+                    stop = stop.fillna(cand)
+            stop = stop.fillna(entry * 0.97)
+
+        # Ensure stop < entry
+        stop = stop.where(stop < entry, entry * 0.97)
+
+        risk = ((entry - stop) / entry) * 100.0
+        risk = risk.clip(lower=0.0)
+        out_df["Risk_%"] = risk.round(2)
+
+        # Fill any remaining missing Risk_% using Refined Buy Price and Atr Trailing Stop (last-resort)
+        if out_df["Risk_%"].isna().any():
+            e2 = pd.to_numeric(out_df.get("Refined Buy Price"), errors="coerce")
+            s2 = pd.to_numeric(out_df.get("Atr Trailing Stop"), errors="coerce")
+            alt = ((e2 - s2) / e2) * 100.0
+            out_df.loc[out_df["Risk_%"].isna(), "Risk_%"] = alt.round(2)
+
+
+    if "Reward_%" in out_df.columns:
+        # Prefer 90D Gain (%) if present; else use proxy based on Recommendation
+        if "90D Gain (%)" in out_df.columns:
+            rew = pd.to_numeric(out_df.get("90D Gain (%)"), errors="coerce")
+        else:
+            rew = pd.Series([np.nan] * len(out_df))
+
+        recs = out_df.get("Recommendation", pd.Series([""] * len(out_df))).astype(str).str.upper()
+        proxy = recs.map(lambda x: 15.0 if x in ("STRONG_BUY","STRONG BUY") else 10.0 if x == "BUY" else 5.0 if x == "WATCH" else 0.0)
+
+        rew = rew.where(rew.notna() & (rew != 0), proxy)
+        out_df["Reward_%"] = pd.to_numeric(rew, errors="coerce").round(2)
+
+
+    # ------------------------------------------------------------------
+    # Write Excel (single authoritative write)
+    # Convert NaN/inf -> None so Excel cells are truly populated/blank as intended.
+    # ------------------------------------------------------------------
     out_df = out_df.replace([np.inf, -np.inf], np.nan)
     out_df = out_df.where(pd.notna(out_df), None)
 
     write_template_excel(out_df, template_path=template_path, out_path=out_path, sheet_name=args.sheet)
     print(f"\n📊 Excel saved → {out_path}")
-
 
 if __name__ == "__main__":
     main()
