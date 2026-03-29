@@ -1,0 +1,39 @@
+  {
+  "model_type": "xgboost_calibrated",
+  "rows_total": 21658,
+  "rows_train": 17326,
+  "rows_valid": 4332,
+  "positive_rate_total": 0.7024194293101856,
+  "positive_rate_train": 0.7186886759782986,
+  "positive_rate_valid": 0.6373499538319483,
+  "threshold_used": 0.62,
+  "train_precision": 0.7274481145863783,
+  "train_recall": 0.9992772245422422,
+  "train_f1": 0.8419663700646209,
+  "valid_precision": 0.6372708284984915,
+  "valid_recall": 0.9945671858022456,
+  "valid_f1": 0.7768033946251768,
+  "valid_auc": 0.44787645321727954,
+  "valid_pr_auc": 0.6034210843660894,
+  "best_f1_threshold": {
+    "thr": 0.2,
+    "precision": 0.6373499538319483,
+    "recall": 1.0,
+    "f1": 0.7785140279148456,
+    "predicted_positives": 4332
+  },
+  "best_precision_min20_threshold": {
+    "thr": 0.6099999999999999,
+    "precision": 0.6375202405736757,
+    "recall": 0.9981890619340819,
+    "f1": 0.7780914737436476,
+    "predicted_positives": 4323
+  },
+  "best_recall_threshold": {
+    "thr": 0.2,
+    "precision": 0.6373499538319483,
+    "recall": 1.0,
+    "f1": 0.7785140279148456,
+    "predicted_positives": 4332
+  }
+}

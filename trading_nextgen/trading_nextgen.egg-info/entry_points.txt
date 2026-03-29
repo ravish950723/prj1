@@ -1,0 +1,5 @@
+[console_scripts]
+buypipe-run = buypipe.cli:run_pipeline_cli
+buypipe-train = buypipe.cli:train_models_cli
+buypipe-train-dl = buypipe.cli:train_dl_cli
+buypipe-train-ml = buypipe.cli:train_ml_cli

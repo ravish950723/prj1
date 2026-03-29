@@ -1,0 +1,35 @@
+signal_score_weights:
+  EMA_uptrend: 0.15
+  MACD_crossover: 0.15
+  strong_trend: 0.15
+  darvas_signal: 0.10
+  tight_range: 0.10
+  volume_surge: 0.10
+  near_support: 0.05
+  green_candles: 0.05
+  above_EMA200: 0.05
+  MACD_hist_slope_positive: 0.05
+
+thresholds:
+  refined_buy_signal_min: 0.75
+
+confidence_score_weights:
+  institutional_score: 0.50
+  volume_weight: 0.30
+  adx_component: 0.20
+
+regime_quality_weights:
+  stage_strength_score: 0.45
+  substage_confidence: 0.25
+  signal_score: 0.15
+  confidence_score: 0.15
+
+
+Order Flow Score:
+  Institutional Flow Score
+  Absorption Score
+  Stealth Accumulation Score
+  Stealth Distribution Score
+  Order Flow Imbalance
+  Buy Pressure
+  Sell Pressure

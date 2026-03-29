@@ -1,0 +1,58 @@
+{
+  "ml": {
+    "model_type": "xgboost_calibrated",
+    "rows_total": 1505509,
+    "rows_train": 1204407,
+    "rows_valid": 301102,
+    "positive_rate_total": 0.016490768238516012,
+    "positive_rate_train": 0.016124117511771355,
+    "positive_rate_valid": 0.017957369927798554,
+    "threshold_used": 0.07,
+    "train_precision": 0.41048838076301725,
+    "train_recall": 0.8504634397528321,
+    "train_f1": 0.5537172072751655,
+    "valid_precision": 0.5088235294117647,
+    "valid_recall": 0.03199556130941372,
+    "valid_f1": 0.06020532451713938,
+    "valid_auc": 0.9877192768318335,
+    "valid_pr_auc": 0.4428930959479055,
+    "best_f1_threshold": {
+      "thr": 0.05,
+      "precision": 0.46862265688671556,
+      "recall": 0.10634362862955428,
+      "f1": 0.17334941211938498,
+      "predicted_positives": 1227
+    },
+    "best_precision_target_threshold": {
+      "thr": 0.07,
+      "precision": 0.5088235294117647,
+      "recall": 0.03199556130941372,
+      "f1": 0.06020532451713938,
+      "predicted_positives": 340
+    },
+    "best_recall_threshold": {
+      "thr": 0.05,
+      "precision": 0.46862265688671556,
+      "recall": 0.10634362862955428,
+      "f1": 0.17334941211938498,
+      "predicted_positives": 1227
+    },
+    "leakage_columns_removed": [
+      "HTF_Trend",
+      "ITF_Trend",
+      "LTF_Trend",
+      "avoid",
+      "buy",
+      "future_drawdown_min",
+      "future_return_max",
+      "market_stage",
+      "market_substage",
+      "rule_recommendation"
+    ],
+    "feature_count": 160
+  },
+  "dl": {
+    "enabled": false,
+    "note": "DL disabled until label quality improves."
+  }
+}

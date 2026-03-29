@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "rows_total": 21658,
+  "rows_train": 17326,
+  "rows_valid": 4332,
+  "epochs": 40,
+  "threshold_used": 0.62,
+  "train_precision": 0.0,
+  "train_recall": 0.0,
+  "valid_precision": 0.0,
+  "valid_recall": 0.0
+}

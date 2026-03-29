@@ -1,0 +1,68 @@
+{
+  "schema_version": "2.1",
+  "generated_on": "2025-12-22",
+  "optimization_target": ">=15% gain within 45 days",
+  "label_definition_used_for_threshold_optimization": {
+    "horizon_days_target": 45,
+    "success_metric_target": "Peak gain within horizon",
+    "success_condition_target": "gain >= 15% AND achieved within 45 days",
+    "implemented_proxy_due_to_output_limits": {
+      "used_columns": [
+        "90D Gain (%)",
+        "Days to Peak"
+      ],
+      "proxy_condition": "90D Gain (%) >= 15.0 AND Days to Peak <= 45",
+      "note": "Proxy used because sheet does not contain 45D Gain (%). For exact optimization, re-run backtest.py with horizon_days=45 and add '45D Gain (%)' to the sheet."
+    }
+  },
+  "model_probability_thresholds": {
+    "WATCH": 0.61,
+    "BUY": 0.6201,
+    "STRONG_BUY": 0.6605
+  },
+  "best_f1": {
+    "thr": 0.6201168614357262,
+    "precision": 0.5187637969094923,
+    "recall": 0.8736059479553904,
+    "f1": 0.6509695290858726,
+    "trades": 453,
+    "success_base_rate": 0.4100609756097561,
+    "mean_90d_gain_pct_selected": 38.46507726269316,
+    "median_90d_gain_pct_selected": 24.59,
+    "mean_days_to_peak_selected": 40.11699779249448,
+    "median_days_to_peak_selected": 37.0
+  },
+  "best_precision_min20trades": {
+    "thr": 0.6604841402337228,
+    "precision": 0.7153846153846154,
+    "recall": 0.34572490706319703,
+    "f1": 0.46616541353383456,
+    "trades": 130,
+    "success_base_rate": 0.4100609756097561,
+    "mean_90d_gain_pct_selected": 57.14061538461539,
+    "median_90d_gain_pct_selected": 41.625,
+    "mean_days_to_peak_selected": 32.2,
+    "median_days_to_peak_selected": 30.0
+  },
+  "best_recall_minPrecision0p75": {
+    "thr": 0.6905008347245408,
+    "precision": 1.0,
+    "recall": 0.007434944237918215,
+    "f1": 0.014760147601476014,
+    "trades": 2,
+    "success_base_rate": 0.4100609756097561,
+    "mean_90d_gain_pct_selected": 90.335,
+    "median_90d_gain_pct_selected": 90.335,
+    "mean_days_to_peak_selected": 19.5,
+    "median_days_to_peak_selected": 19.5
+  },
+  "distribution_snapshot": {
+    "model_probability_min": 0.41,
+    "model_probability_p25": 0.61,
+    "model_probability_p50": 0.64,
+    "model_probability_p75": 0.66,
+    "model_probability_max": 0.72,
+    "n_rows": 656,
+    "success_base_rate_proxy": 0.4100609756097561
+  }
+}

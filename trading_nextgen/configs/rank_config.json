@@ -1,0 +1,74 @@
+{
+  "version": "1.2-dual-mode",
+  "scoring": {
+    "top_n": 20,
+    "weights": {
+      "trend": 0.25,
+      "volume": 0.2,
+      "momentum": 0.2,
+      "volatility": 0.1,
+      "relative_strength": 0.15,
+      "liquidity": 0.1
+    }
+  },
+  "thresholds": {
+    "long": {
+      "vol_surge_breakout": 1.25,
+      "vol_surge_reversal": 1.2,
+      "vol_pullback_max": 1.35,
+      "rsi_breakout_min": 48,
+      "rsi_pullback_min": 40,
+      "long_score_buy_now": 55,
+      "long_score_wait_dip": 48
+    },
+    "short": {
+      "rsi_short_max": 50,
+      "gap_down_pct": -3.0,
+      "overext_dma20_pct": 10.0,
+      "borrow_fee_max": 20.0,
+      "short_score_short_now": 60,
+      "short_score_wait_bounce": 52
+    }
+  },
+  "modes": {
+    "breakout": {
+      "long": {
+        "vol_surge_breakout": 2.0,
+        "vol_surge_reversal": 1.5,
+        "vol_pullback_max": 1.2,
+        "rsi_breakout_min": 55,
+        "rsi_pullback_min": 45,
+        "long_score_buy_now": 70,
+        "long_score_wait_dip": 55
+      },
+      "short": {
+        "rsi_short_max": 45,
+        "gap_down_pct": -3.0,
+        "overext_dma20_pct": 12.0,
+        "borrow_fee_max": 20.0,
+        "short_score_short_now": 70,
+        "short_score_wait_bounce": 55
+      }
+    },
+    "pullback": {
+      "long": {
+        "vol_surge_breakout": 1.25,
+        "vol_surge_reversal": 1.2,
+        "vol_pullback_max": 1.35,
+        "rsi_breakout_min": 48,
+        "rsi_pullback_min": 40,
+        "long_score_buy_now": 55,
+        "long_score_wait_dip": 48
+      },
+      "short": {
+        "rsi_short_max": 50,
+        "gap_down_pct": -3.0,
+        "overext_dma20_pct": 10.0,
+        "borrow_fee_max": 20.0,
+        "short_score_short_now": 60,
+        "short_score_wait_bounce": 52
+      }
+    }
+  },
+  "active_mode_default": "pullback"
+}

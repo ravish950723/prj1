@@ -1,0 +1,89 @@
+# NextGen BUYPIPE
+
+A clean modular trading pipeline with:
+- data ingestion (IBKR + Alpha Vantage fallback)
+- classical feature engineering
+- quant factor layer
+- machine learning scoring
+- optional deep learning scoring
+- RL threshold adaptation
+- deterministic Excel writer using `configs/col.yml`
+
+## Runtime flow
+
+```text
+fetch -> indicators -> macro/eps/sentiment -> quant factors -> ML -> Deep Learning -> RL thresholds -> Excel
+```
+
+## Project layout
+
+- `run_pipeline.py` — single entrypoint
+- `buypipe/config.py` — project paths and runtime knobs
+- `buypipe/schema.py` — loads `configs/col.yml` and builds the output contract
+- `buypipe/data_sources.py` — wraps existing `fetching.py`
+- `buypipe/feature_engineering.py` — indicators, macro, darvas, exits, EPS, sentiment, setups
+- `buypipe/quant.py` — factor model + composite quant score
+- `buypipe/ml_models.py` — classical ML scoring
+- `buypipe/deep_learning.py` — optional PyTorch LSTM inference / fallback proxy
+- `buypipe/scoring.py` — merges ML + DL + quant + RL thresholds
+- `buypipe/pipeline.py` — orchestrator
+- `buypipe/writer.py` — Excel writer
+- `scripts/cleanup_legacy.py` — deletes duplicated legacy files from an old project folder
+- `scripts/compile_check.py` — quick syntax check
+
+## How to run
+
+```bash
+python run_pipeline.py \
+  --template /mnt/data/predictions_summary_out.xlsx \
+  --schema configs/col.yml \
+  --out outputs/predictions_summary_out_nextgen.xlsx
+```
+
+
+## Training pipeline
+
+Train ML + Deep Learning + RL artifacts from a historical Excel/CSV file:
+
+```bash
+python train_models.py --source train_data.csv --out-dir . --epochs 40
+```
+
+Expected training source columns:
+- preferred: `strong_buy` label
+- or proxy label from `90D Gain (%)` and `Days to Peak`
+
+Generated artifacts:
+- `strong_buy_xgb_model_calibrated.pkl`
+- `model_features.txt`
+- `dl_lstm_model.pt`
+- `rl_threshold_policy.pkl`
+- `training_summary.json`
+
+## Deep learning
+
+If `torch` is installed and a checkpoint exists, the pipeline uses it. Otherwise it falls back to a transparent proxy built from quant + momentum features.
+
+Expected optional files in project root:
+- `strong_buy_xgb_model_calibrated.pkl`
+- `strong_buy_xgb_model.pkl`
+- `rl_threshold_policy.pkl`
+- `dl_lstm_model.pt`
+- `model_features.txt`
+
+## Legacy files to retire from the old monolithic project
+
+Recommended deletions after migrating:
+- `buy.py`
+- `buy_updated.py`
+- `buy_rl.py`
+- `buy_srs_update_excel.py`
+- `build_master_features.py`
+- `validate_excel_columns.py`
+- `compile_check.py`
+- `run_all.bat`
+- `retrain_model.bat`
+- `train_rl_policy.bat`
+- `testmodel.py`
+
+Do **not** delete shared dependency modules unless they are fully copied into this project and you no longer need the original workspace.

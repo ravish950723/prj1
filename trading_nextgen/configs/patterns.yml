@@ -1,0 +1,112 @@
+enabled_patterns:
+  HAMMER: true
+  DOJI: true
+  VWAP_RECLAIM: true
+  VWAP_REJECTION: true
+  GAP_UP: true
+  GAP_DOWN: true
+  HIGH_VOLUME_BREAKOUT: true
+  SUPPORT_BREAKDOWN: true
+  EMA_STACKED_BULLISH: true
+  EMA_STACKED_BEARISH: true
+  HIGHER_HIGH_HIGHER_LOW (HHHL) : true
+  BULLISH_CHANNEL: true
+  ASCENDING_TRENDLINE: true
+  EMA_STACKED_BULLISH (20 > 50 > 200): true
+  TREND_ACCELERATION: true
+  LOWER_HIGH_LOWER_LOW (LHLL): true
+  BEARISH_CHANNEL: true
+  DESCENDING_TRENDLINE: true
+  EMA_STACKED_BEARISH (20 < 50 < 200): true
+  TREND_DECELERATION: true
+  RANGE_BOUND: true
+  RECTANGLE: true
+  SIDEWAYS_BASE: true
+  FLAT_BASE (William O’Neil style): true
+  TIGHT_RANGE_CONSOLIDATION: true
+  VOLATILITY_CONTRACTION_PATTERN (VCP): true
+  SQUEEZE (Bollinger Band squeeze): true
+  LOW_VOLATILITY_COMPRESSION: true
+  ASCENDING_TRIANGLE (bullish): true
+  DESCENDING_TRIANGLE (bearish): true
+  SYMMETRICAL_TRIANGLE (neutral breakout): true
+  EXPANDING_TRIANGLE (megaphone): true
+  RESISTANCE_BREAKOUT: true
+  LOW_VOLUME_BREAKOUT (weak): true
+  FALSE_BREAKOUT (bull trap): true
+  FALSE_BREAKDOWN (bear trap): true
+  GAP_BREAKOUT: true
+  OPENING_RANGE_BREAKOUT: true
+  DOUBLE_BOTTOM: true
+  TRIPLE_BOTTOM: true
+  INVERSE_HEAD_AND_SHOULDERS: true
+  ROUNDED_BOTTOM: true
+  FALLING_WEDGE (bullish): true
+  DOUBLE_TOP: true
+  TRIPLE_TOP: true
+  HEAD_AND_SHOULDERS: true
+  ROUNDED_TOP: true
+  RISING_WEDGE (bearish): true
+  BULL_FLAG: true
+  BEAR_FLAG: true
+  BULL_PENNANT: true
+  BEAR_PENNANT: true
+  CUP_AND_HANDLE: true
+  INVERSE_CUP_AND_HANDLE: true
+  MEASURED_MOVE: true
+  CHANNEL_CONTINUATION: true
+  INVERTED_HAMMER: true
+  BULLISH_ENGULFING: true
+  MORNING_STAR: true
+  THREE_WHITE_SOLDIERS: true
+  PIERCING_PATTERN: true
+  SHOOTING_STAR: true
+  HANGING_MAN: true
+  BEARISH_ENGULFING: true
+  EVENING_STAR: true
+  THREE_BLACK_CROWS: true
+  DARK_CLOUD_COVER: true
+  SPINNING_TOP: true
+  INSIDE_BAR: true
+  OUTSIDE_BAR: true
+  VOLUME_SPIKE: true
+  VOLUME_DRY_UP: true
+  ACCUMULATION_VOLUME_PATTERN: true
+  DISTRIBUTION_VOLUME_PATTERN: true
+  CLIMAX_VOLUME: true
+  LOW_VOLUME_PULLBACK (VERY BULLISH): true
+  HIGH_VOLUME_SELL_OFF: true
+  LIQUIDITY_GRAB: true
+  STOP_HUNT: true
+  ORDER_BLOCK: true
+  FAIR_VALUE_GAP (FVG): true
+  BREAK_OF_STRUCTURE (BOS): true
+  CHANGE_OF_CHARACTER (CHOCH): true
+  INDUCEMENT_PATTERN: true
+  RSI_DIVERGENCE_BULLISH: true
+  RSI_DIVERGENCE_BEARISH: true
+  MACD_BULLISH_CROSSOVER: true
+  MACD_BEARISH_CROSSOVER: true
+  ADX_TREND_STRENGTH: true
+  BREAKAWAY_GAP: true
+  RUNAWAY_GAP: true
+  EXHAUSTION_GAP: true
+  GAP_FILL: true
+  SUPPORT_RESPECT: true
+  RESISTANCE_REJECTION: true
+  SUPPORT_FLIP_TO_RESISTANCE: true
+  RESISTANCE_FLIP_TO_SUPPORT: true
+  FAKE_BREAKOUT_STRUCTURE: true
+  RANGE_EXPANSION: true
+
+
+
+thresholds:
+  hammer_lower_wick_multiple: 2.0
+  hammer_upper_wick_max_body_multiple: 1.0
+  doji_body_to_range_max: 0.10
+  breakout_volume_ratio_min: 1.5
+  range_bound_20d_max_pct: 0.08
+  tight_range_20d_max_pct: 0.04
+
+

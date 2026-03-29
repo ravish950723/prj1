@@ -1,0 +1,10 @@
+pandas
+numpy
+openpyxl
+joblib
+pyarrow
+requests
+ib-insync
+pandas-ta
+torch
+scikit-learn

@@ -1,0 +1,23 @@
+{
+  "best_f1": {
+    "thr": 0.2,
+    "precision": 0.6373499538319483,
+    "recall": 1.0,
+    "f1": 0.7785140279148456,
+    "predicted_positives": 4332
+  },
+  "best_precision_min20": {
+    "thr": 0.6099999999999999,
+    "precision": 0.6375202405736757,
+    "recall": 0.9981890619340819,
+    "f1": 0.7780914737436476,
+    "predicted_positives": 4323
+  },
+  "best_recall": {
+    "thr": 0.2,
+    "precision": 0.6373499538319483,
+    "recall": 1.0,
+    "f1": 0.7785140279148456,
+    "predicted_positives": 4332
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "threshold": 0.07,
+  "min_precision_target": 0.5,
+  "eps_cache_dir": "C:\\ravish\\py_work\\IKBR\\predic\\trading_nextgen\\buypipe\\cache\\eps",
+  "date_split_column": "date",
+  "label_column": "strong_buy"
+}
